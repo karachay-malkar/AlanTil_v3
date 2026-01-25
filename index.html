@@ -17,40 +17,55 @@
   </header>
 
   <main class="wrap">
-    <!-- ПАПКИ -->
-    <section id="viewFolders" class="view">
+    <!-- УРОВЕНЬ 1: СЛОВАРИ -->
+    <section id="viewDicts" class="view">
       <div class="panel">
-        <div class="panelTitle">Папки</div>
-        <div id="foldersList" class="stack"></div>
-        <div class="smallNote">Папки и сеты строятся автоматически из данных (folder + set).</div>
+        <div class="panelTitle">Словари</div>
+
+        <div class="row">
+          <button id="btnGlobalTest" class="btn primary">Тест: выбрать перевод</button>
+        </div>
+
+        <div id="dictsList" class="stack" style="margin-top:12px;"></div>
+        <div class="smallNote">Иерархия: словарь → раздел → сет. Скрытие слов влияет только на карточки, тест учитывает даже скрытые.</div>
       </div>
     </section>
 
-    <!-- СПИСОК СЕТОВ В ПАПКЕ -->
+    <!-- УРОВЕНЬ 2: РАЗДЕЛЫ -->
+    <section id="viewSections" class="view hidden">
+      <div class="panel">
+        <div class="panelTitle" id="sectionsTitle">Разделы</div>
+        <div id="sectionsList" class="stack"></div>
+        <div class="row">
+          <button id="btnBackToDicts" class="btn ghost">← Словари</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- УРОВЕНЬ 3: СЕТЫ -->
     <section id="viewSets" class="view hidden">
       <div class="panel">
         <div class="panelTitle" id="setsTitle">Сеты</div>
         <div id="setsList" class="stack"></div>
         <div class="row">
-          <button id="btnBackToFolders" class="btn ghost">← Папки</button>
+          <button id="btnBackToSections" class="btn ghost">← Разделы</button>
         </div>
       </div>
     </section>
 
-    <!-- МЕНЮ СЕТА: выбор режима + список слов с возможностью скрыть -->
+    <!-- МЕНЮ СЕТА -->
     <section id="viewSetMenu" class="view hidden">
       <div class="panel">
         <div class="panelTitle" id="setMenuTitle">Сет</div>
+        <div class="hintText" id="setMenuInfo">—</div>
 
         <div class="row">
-          <button id="btnModeKb" class="btn primary">Учить на КБ</button>
-          <button id="btnModeRu" class="btn secondary">Учить на RU</button>
+          <button id="btnModeKb" class="btn primary">Учить слова на карачаево‑балкарском</button>
+          <button id="btnModeRu" class="btn primary">Учить слова на русском</button>
         </div>
 
-        <div class="smallNote" id="setMenuInfo">—</div>
-
         <label class="field">
-          <span>Поиск в сете</span>
+          <span>Поиск</span>
           <input id="setSearchInput" type="text" placeholder="например: суу / вода" />
         </label>
 
@@ -63,6 +78,44 @@
 
         <div class="row">
           <button id="btnBackToSets2" class="btn ghost">← К сетам</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- МЕНЮ ГЛОБАЛЬНОГО ТЕСТА -->
+    <section id="viewGlobalTestMenu" class="view hidden">
+      <div class="panel">
+        <div class="panelTitle">Тест: выбрать перевод</div>
+        <div class="hintText" id="globalTestInfo">—</div>
+
+        <label class="field" style="margin-top:12px;">
+          <span>Источник слов</span>
+          <select id="globalDictSelect"></select>
+        </label>
+
+        <div class="row">
+          <button id="btnGlobalModeKb" class="btn primary">КБ → RU (показать КБ, выбрать перевод)</button>
+          <button id="btnGlobalModeRu" class="btn primary">RU → КБ (показать RU, выбрать перевод)</button>
+        </div>
+
+        <div class="row">
+          <button id="btnGlobalTestBack" class="btn ghost">← Назад</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ТЕСТ -->
+    <section id="viewTest" class="view hidden">
+      <div class="panel">
+        <div class="panelTitle" id="testTitle">Тест</div>
+        <div class="hintText" id="testProgress">—</div>
+
+        <div class="testQuestion" id="testQuestion">—</div>
+        <div id="testOptions" class="stack" style="margin-top:12px;"></div>
+
+        <div class="row">
+          <button id="btnTestExit" class="btn ghost">← Выйти</button>
+          <button id="btnTestNext" class="btn primary hidden">Следующий</button>
         </div>
       </div>
     </section>

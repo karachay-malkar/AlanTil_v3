@@ -2,58 +2,91 @@
   const tg = window.Telegram?.WebApp;
   try { tg?.ready(); } catch {}
 
-  const viewFolders = document.getElementById("viewFolders");
+  // Views
+  const viewDicts = document.getElementById("viewDicts");
+  const viewSections = document.getElementById("viewSections");
   const viewSets = document.getElementById("viewSets");
   const viewSetMenu = document.getElementById("viewSetMenu");
+  const viewGlobalTestMenu = document.getElementById("viewGlobalTestMenu");
+  const viewTest = document.getElementById("viewTest");
   const viewStudy = document.getElementById("viewStudy");
 
-  const foldersList = document.getElementById("foldersList");
+  // Dicts
+  const dictsList = document.getElementById("dictsList");
+  const btnGlobalTest = document.getElementById("btnGlobalTest");
+
+  // Sections
+  const sectionsTitle = document.getElementById("sectionsTitle");
+  const sectionsList = document.getElementById("sectionsList");
+  const btnBackToDicts = document.getElementById("btnBackToDicts");
+
+  // Sets
   const setsTitle = document.getElementById("setsTitle");
   const setsList = document.getElementById("setsList");
-  const btnBackToFolders = document.getElementById("btnBackToFolders");
+  const btnBackToSections = document.getElementById("btnBackToSections");
 
+  // Set menu
   const setMenuTitle = document.getElementById("setMenuTitle");
   const setMenuInfo = document.getElementById("setMenuInfo");
-  const setSearchInput = document.getElementById("setSearchInput");
-  const setWordsList = document.getElementById("setWordsList");
-  const btnSetShowAll = document.getElementById("btnSetShowAll");
-  const btnSetHideAll = document.getElementById("btnSetHideAll");
   const btnModeKb = document.getElementById("btnModeKb");
   const btnModeRu = document.getElementById("btnModeRu");
+  const setSearchInput = document.getElementById("setSearchInput");
+  const btnSetShowAll = document.getElementById("btnSetShowAll");
+  const btnSetHideAll = document.getElementById("btnSetHideAll");
+  const setWordsList = document.getElementById("setWordsList");
   const btnBackToSets2 = document.getElementById("btnBackToSets2");
 
-  const elCard = document.getElementById("card");
-  const elWord = document.getElementById("word");
-  const elTrans = document.getElementById("trans");
-  const elCounter = document.getElementById("counter");
-  const elMode = document.getElementById("mode");
+  // Study
+  const card = document.getElementById("card");
+  const wordEl = document.getElementById("word");
+  const transEl = document.getElementById("trans");
   const btnExample = document.getElementById("btnExample");
   const exampleBox = document.getElementById("exampleBox");
   const btnYes = document.getElementById("btnYes");
   const btnNo = document.getElementById("btnNo");
   const btnBackToSetMenu = document.getElementById("btnBackToSetMenu");
 
-  // -------------------- persistent hidden words per set --------------------
-  const HIDDEN_KEY = "fc_hidden_by_set_v4";
+  // Top meta
+  const counter = document.getElementById("counter");
+  const modeEl = document.getElementById("mode");
+
+  // Global test menu
+  const globalTestInfo = document.getElementById("globalTestInfo");
+  const globalDictSelect = document.getElementById("globalDictSelect");
+  const btnGlobalModeKb = document.getElementById("btnGlobalModeKb");
+  const btnGlobalModeRu = document.getElementById("btnGlobalModeRu");
+  const btnGlobalTestBack = document.getElementById("btnGlobalTestBack");
+
+  // Test view
+  const testTitle = document.getElementById("testTitle");
+  const testProgress = document.getElementById("testProgress");
+  const testQuestion = document.getElementById("testQuestion");
+  const testOptions = document.getElementById("testOptions");
+  const btnTestExit = document.getElementById("btnTestExit");
+  const btnTestNext = document.getElementById("btnTestNext");
+
+  // ---------- Storage: hidden words (affects ONLY STUDY sessions)
+  const HIDDEN_KEY = "fc_hidden_by_set_v7";
   function loadHiddenMap() { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "{}"); } catch { return {}; } }
   function saveHiddenMap(map) { localStorage.setItem(HIDDEN_KEY, JSON.stringify(map)); }
-  function keyOf(folder, setNo) { return `${folder}:${setNo}`; }
-  function getHiddenSet(folder, setNo) {
+  function keyOf(d, s, setNo) { return `${d}:${s}:${setNo}`; }
+  function getHiddenSet(d, s, setNo) {
     const map = loadHiddenMap();
-    const arr = Array.isArray(map[keyOf(folder, setNo)]) ? map[keyOf(folder, setNo)] : [];
+    const arr = Array.isArray(map[keyOf(d, s, setNo)]) ? map[keyOf(d, s, setNo)] : [];
     return new Set(arr.map(Number));
   }
-  function setHiddenSet(folder, setNo, setOfIds) {
+  function setHiddenSet(d, s, setNo, setOfIds) {
     const map = loadHiddenMap();
-    map[keyOf(folder, setNo)] = Array.from(setOfIds);
+    map[keyOf(d, s, setNo)] = Array.from(setOfIds);
     saveHiddenMap(map);
   }
 
-  // -------------------- loading words --------------------
-  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v4";
+  // ---------- Cache
+  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v3";
   function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch { return null; } }
   function saveCache(data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {} }
 
+  // ---------- Sheets URL -> CSV
   function normalizeToCsvUrl(url) {
     const u = (url || "").trim();
     if (!u) return "";
@@ -70,7 +103,6 @@
 
     const sheetUrl = (window.WORDS_SHEET_URL || "").trim();
     const csvUrl = normalizeToCsvUrl(sheetUrl);
-
     if (csvUrl && csvUrl.startsWith("http")) {
       try {
         const words = await loadWordsFromCsv(csvUrl);
@@ -87,6 +119,8 @@
     return parseCsv(text);
   }
 
+  // Expected headers: id, dict, section, set, word, trans, example
+  // Backward compatible: folder -> section, dict defaults to "Словарь"
   function parseCsv(text) {
     const rows = [];
     let row = [];
@@ -114,45 +148,54 @@
     const headers = rows[0].map(h => (h || "").trim().toLowerCase());
     const idx = (name) => headers.findIndex(h => h === name);
 
-    const need = ["id","folder","set","word","trans","example"];
-    if (need.some(n => idx(n) === -1)) return [];
+    const idI = idx("id");
+    const dictI = idx("dict");
+    const sectionI = idx("section");
+    const folderI = idx("folder");
+    const setI = idx("set");
+    const wordI = idx("word");
+    const transI = idx("trans");
+    const exI = idx("example");
+
+    if (idI === -1 || setI === -1 || wordI === -1 || transI === -1) return [];
 
     const out = [];
     for (let r = 1; r < rows.length; r++) {
       const cols = rows[r];
       if (!cols || cols.every(c => !String(c||"").trim())) continue;
 
+      const dict = dictI !== -1 ? String(cols[dictI] || "").trim() : "Словарь";
+      const section = sectionI !== -1 ? String(cols[sectionI] || "").trim()
+                    : (folderI !== -1 ? String(cols[folderI] || "").trim() : "Раздел");
+
       const obj = {
-        id: Number(cols[idx("id")] || 0),
-        folder: String(cols[idx("folder")] || "").trim(),
-        set: Number(cols[idx("set")] || 0),
-        word: String(cols[idx("word")] || "").trim(),   // КБ
-        trans: String(cols[idx("trans")] || "").trim(), // RU
-        example: String(cols[idx("example")] || "").trim(),
+        id: Number(cols[idI] || 0),
+        dict: dict || "Словарь",
+        section: section || "Раздел",
+        set: Number(cols[setI] || 0),
+        word: String(cols[wordI] || "").trim(),
+        trans: String(cols[transI] || "").trim(),
+        example: exI !== -1 ? String(cols[exI] || "").trim() : "",
       };
-      if (!obj.id || !obj.folder || !obj.set || !obj.word || !obj.trans) continue;
+      if (!obj.id || !obj.set || !obj.word || !obj.trans) continue;
       out.push(obj);
     }
     return out;
   }
 
-  // -------------------- helpers --------------------
+  // ---------- Helpers
   function showView(which) {
-    [viewFolders, viewSets, viewSetMenu, viewStudy].forEach(v => v.classList.add("hidden"));
+    [viewDicts, viewSections, viewSets, viewSetMenu, viewGlobalTestMenu, viewTest, viewStudy].forEach(v => v.classList.add("hidden"));
     which.classList.remove("hidden");
   }
   function uniq(arr) { return Array.from(new Set(arr)); }
   function sortNatural(a, b) { return String(a).localeCompare(String(b), "ru", { numeric: true, sensitivity: "base" }); }
-  function foldersFrom(words) { return uniq(words.map(w => w.folder)).sort(sortNatural); }
-  function setsFrom(words, folder) { return uniq(words.filter(w => w.folder === folder).map(w => Number(w.set))).sort((a,b)=>a-b); }
-  function wordsFor(words, folder, setNo) { return words.filter(w => w.folder === folder && Number(w.set) === Number(setNo)); }
   function escapeHtml(s) {
     return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
-  function folderTitle(code) {
-    const map = window.FOLDER_TITLES || {};
-    return map[code] || code;
-  }
+  function dictTitle(code) { return (window.DICT_TITLES || {})[code] || code; }
+  function sectionTitle(code) { return (window.SECTION_TITLES || {})[code] || code; }
+
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -161,87 +204,99 @@
     return arr;
   }
 
-  // -------------------- state --------------------
+  // ---------- Data helpers
+  function dictsFrom(words) { return uniq(words.map(w => w.dict)).sort(sortNatural); }
+  function sectionsFrom(words, dict) { return uniq(words.filter(w => w.dict === dict).map(w => w.section)).sort(sortNatural); }
+  function setsFrom(words, dict, section) {
+    return uniq(words.filter(w => w.dict === dict && w.section === section).map(w => Number(w.set))).sort((a,b)=>a-b);
+  }
+  function wordsForSet(words, dict, section, setNo) {
+    return words.filter(w => w.dict === dict && w.section === section && Number(w.set) === Number(setNo));
+  }
+
+  // ---------- App state
   let DATA = [];
-  let currentFolder = "";
+  let currentDict = "";
+  let currentSection = "";
   let currentSet = 1;
 
-  // режим: KB_FRONT = учим КБ (на лицевой КБ), RU_FRONT = учим RU (на лицевой RU)
-  let studyMode = "KB_FRONT";
+  // Study mode: kb => front word, ru => front trans
+  let currentStudyMode = "kb";
 
-  // queues
+  // Study queues
   let mainQueue = [];
   let repeatQueue = [];
   let round = "main";
   let totalPlanned = 0;
 
-  // flip
-  let flipped = false;
-
   function setRoundIfNeeded() { if (round === "main" && mainQueue.length === 0) round = "repeat"; }
   function currentQueue() { return round === "main" ? mainQueue : repeatQueue; }
 
-  // -------------------- folders / sets --------------------
-  function renderFolders() {
-    const folders = foldersFrom(DATA);
-    foldersList.innerHTML = folders
-      .map(f => `<button class="btn" data-folder="${escapeHtml(f)}">${escapeHtml(folderTitle(f))}</button>`)
-      .join("");
-
-    foldersList.querySelectorAll("button[data-folder]").forEach(btn => {
+  // ---------- Render dicts / sections / sets
+  function renderDicts() {
+    const dicts = dictsFrom(DATA);
+    dictsList.innerHTML = dicts.map(d => `<button class="btn" data-dict="${escapeHtml(d)}">${escapeHtml(dictTitle(d))}</button>`).join("");
+    dictsList.querySelectorAll("button[data-dict]").forEach(btn => {
       btn.addEventListener("click", () => {
-        currentFolder = btn.getAttribute("data-folder");
-        renderSets(currentFolder);
+        currentDict = btn.getAttribute("data-dict");
+        renderSections(currentDict);
+        showView(viewSections);
+      });
+    });
+    counter.textContent = "—";
+    modeEl.textContent = "—";
+    showView(viewDicts);
+  }
+
+  function renderSections(dict) {
+    sectionsTitle.textContent = `Разделы: ${dictTitle(dict)}`;
+    const sections = sectionsFrom(DATA, dict);
+    sectionsList.innerHTML = sections.map(s => `<button class="btn" data-section="${escapeHtml(s)}">${escapeHtml(sectionTitle(s))}</button>`).join("");
+    sectionsList.querySelectorAll("button[data-section]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentSection = btn.getAttribute("data-section");
+        renderSets(currentDict, currentSection);
         showView(viewSets);
       });
     });
-
-    showView(viewFolders);
   }
 
-  function renderSets(folder) {
-    setsTitle.textContent = `Сеты: ${folderTitle(folder)}`;
-    const sets = setsFrom(DATA, folder);
-
+  function renderSets(dict, section) {
+    setsTitle.textContent = `Сеты: ${sectionTitle(section)}`;
+    const sets = setsFrom(DATA, dict, section);
     setsList.innerHTML = sets.map(s => {
-      const all = wordsFor(DATA, folder, s);
-      const hidden = getHiddenSet(folder, s);
+      const all = wordsForSet(DATA, dict, section, s);
+      const hidden = getHiddenSet(dict, section, s);
       const active = all.filter(w => !hidden.has(w.id));
       return `
-        <button class="btn" data-open-set="${s}">
-          Сет ${s}<br/>
-          <span style="opacity:.75;font-weight:800;font-size:12px;">${active.length}/${all.length} в сессии</span>
+        <button class="btn" data-set="${s}">
+          Сет ${s}
+          <div class="smallNote" style="margin-top:6px;">${active.length}/${all.length} слов в сессии</div>
         </button>
       `;
     }).join("");
 
-    setsList.querySelectorAll("button[data-open-set]").forEach(btn => {
+    setsList.querySelectorAll("button[data-set]").forEach(btn => {
       btn.addEventListener("click", () => {
-        currentSet = Number(btn.getAttribute("data-open-set"));
+        currentSet = Number(btn.getAttribute("data-set"));
         openSetMenu();
       });
     });
   }
 
-  btnBackToFolders.addEventListener("click", () => showView(viewFolders));
-  btnBackToSets2.addEventListener("click", () => {
-    renderSets(currentFolder);
-    showView(viewSets);
-    elCounter.textContent = "—";
-    elMode.textContent = "—";
-  });
+  btnBackToDicts.addEventListener("click", () => showView(viewDicts));
+  btnBackToSections.addEventListener("click", () => showView(viewSections));
 
-  // -------------------- set menu (modes + list with hide) --------------------
+  // ---------- Set menu / hiding words
   let menuHidden = new Set();
 
   function openSetMenu() {
-    menuHidden = getHiddenSet(currentFolder, currentSet);
+    menuHidden = getHiddenSet(currentDict, currentSection, currentSet);
 
-    const all = wordsFor(DATA, currentFolder, currentSet);
+    const all = wordsForSet(DATA, currentDict, currentSection, currentSet);
     const active = all.filter(w => !menuHidden.has(w.id));
-
-    setMenuTitle.textContent = `${folderTitle(currentFolder)} • Сет ${currentSet}`;
-    setMenuInfo.textContent = `Слов в сете: ${all.length}. В сессии: ${active.length}. (Скрытые можно вернуть галочками ниже)`;
+    setMenuTitle.textContent = `${dictTitle(currentDict)} • ${sectionTitle(currentSection)} • Сет ${currentSet}`;
+    setMenuInfo.textContent = `Слов в сете: ${all.length} • В сессии: ${active.length}`;
 
     setSearchInput.value = "";
     renderSetWordsList();
@@ -250,7 +305,7 @@
 
   function renderSetWordsList() {
     const q = (setSearchInput.value || "").trim().toLowerCase();
-    const all = wordsFor(DATA, currentFolder, currentSet);
+    const all = wordsForSet(DATA, currentDict, currentSection, currentSet);
     const filtered = q ? all.filter(w => (w.word + " " + w.trans).toLowerCase().includes(q)) : all;
 
     setWordsList.innerHTML = filtered.map(w => {
@@ -272,212 +327,312 @@
       cb.addEventListener("change", () => {
         if (cb.checked) menuHidden.delete(id);
         else menuHidden.add(id);
-        // persist immediately
-        setHiddenSet(currentFolder, currentSet, menuHidden);
-        // update info
-        const all2 = wordsFor(DATA, currentFolder, currentSet);
+        setHiddenSet(currentDict, currentSection, currentSet, menuHidden);
+
+        const all2 = wordsForSet(DATA, currentDict, currentSection, currentSet);
         const active2 = all2.filter(w => !menuHidden.has(w.id));
-        setMenuInfo.textContent = `Слов в сете: ${all2.length}. В сессии: ${active2.length}. (Скрытые можно вернуть галочками ниже)`;
+        setMenuInfo.textContent = `Слов в сете: ${all2.length} • В сессии: ${active2.length}`;
       });
     });
   }
 
   setSearchInput.addEventListener("input", renderSetWordsList);
+
   btnSetShowAll.addEventListener("click", () => {
     menuHidden = new Set();
-    setHiddenSet(currentFolder, currentSet, menuHidden);
+    setHiddenSet(currentDict, currentSection, currentSet, menuHidden);
     renderSetWordsList();
-    const all = wordsFor(DATA, currentFolder, currentSet);
-    setMenuInfo.textContent = `Слов в сете: ${all.length}. В сессии: ${all.length}. (Скрытые можно вернуть галочками ниже)`;
+    const all = wordsForSet(DATA, currentDict, currentSection, currentSet);
+    setMenuInfo.textContent = `Слов в сете: ${all.length} • В сессии: ${all.length}`;
   });
+
   btnSetHideAll.addEventListener("click", () => {
-    menuHidden = new Set(wordsFor(DATA, currentFolder, currentSet).map(w => w.id));
-    setHiddenSet(currentFolder, currentSet, menuHidden);
+    const all = wordsForSet(DATA, currentDict, currentSection, currentSet);
+    menuHidden = new Set(all.map(w => w.id));
+    setHiddenSet(currentDict, currentSection, currentSet, menuHidden);
     renderSetWordsList();
-    const all = wordsFor(DATA, currentFolder, currentSet);
-    setMenuInfo.textContent = `Слов в сете: ${all.length}. В сессии: 0. (Скрытые можно вернуть галочками ниже)`;
+    setMenuInfo.textContent = `Слов в сете: ${all.length} • В сессии: 0`;
   });
 
-  btnModeKb.addEventListener("click", () => { studyMode = "KB_FRONT"; startSession(); });
-  btnModeRu.addEventListener("click", () => { studyMode = "RU_FRONT"; startSession(); });
+  btnBackToSets2.addEventListener("click", () => {
+    renderSets(currentDict, currentSection);
+    showView(viewSets);
+  });
 
-  // -------------------- study session --------------------
-  function startSession() {
-    const all = wordsFor(DATA, currentFolder, currentSet);
-    const hidden = getHiddenSet(currentFolder, currentSet);
+  btnModeKb.addEventListener("click", () => { currentStudyMode = "kb"; startStudySession(); });
+  btnModeRu.addEventListener("click", () => { currentStudyMode = "ru"; startStudySession(); });
+
+  // ---------- Study session
+  function startStudySession() {
+    const all = wordsForSet(DATA, currentDict, currentSection, currentSet);
+    const hidden = getHiddenSet(currentDict, currentSection, currentSet);
     const active = all.filter(w => !hidden.has(w.id));
 
-    mainQueue = shuffle(active.slice()); // ВСЕГДА перемешиваем
+    mainQueue = shuffle(active.slice());
     repeatQueue = [];
     round = "main";
     totalPlanned = active.length;
-    flipped = false;
 
+    transEl.classList.add("hidden");
+    exampleBox.classList.add("hidden");
     showView(viewStudy);
-    renderCard();
+    renderStudyCard();
   }
 
-  function setFace(item) {
-    // Лицевая: один язык. Оборот: второй язык.
-    const front = (studyMode === "KB_FRONT") ? item.word : item.trans;
-    const back  = (studyMode === "KB_FRONT") ? item.trans : item.word;
-
-    elWord.textContent = front;
-
-    if (flipped) {
-      elTrans.textContent = back;
-      elTrans.classList.remove("hidden");
-    } else {
-      elTrans.textContent = "";
-      elTrans.classList.add("hidden");
-    }
-  }
-
-  function renderCard() {
+  function renderStudyCard() {
     setRoundIfNeeded();
     const q = currentQueue();
 
-    // reset example UI
+    // reset front state
+    transEl.classList.add("hidden");
     exampleBox.classList.add("hidden");
-    btnExample.textContent = "Показать пример";
 
     if (totalPlanned === 0) {
-      elWord.textContent = "Пусто 🤷‍♂️";
-      elTrans.classList.remove("hidden");
-      elTrans.textContent = "В этом сете все слова скрыты. Верни нужные в меню сета.";
-      elCounter.textContent = "0/0";
-      elMode.textContent = "—";
+      wordEl.textContent = "Пусто 🤷‍♂️";
+      transEl.textContent = "В этом сете все слова скрыты. Верни их в меню сета.";
+      transEl.classList.remove("hidden");
       btnExample.classList.add("hidden");
+      counter.textContent = "0/0";
+      modeEl.textContent = "—";
       return;
+    } else {
+      btnExample.classList.remove("hidden");
     }
-    btnExample.classList.remove("hidden");
 
     if (q.length === 0) {
-      elWord.textContent = "Готово ✅";
-      elTrans.classList.remove("hidden");
-      elTrans.textContent = "Сессия завершена. Можно вернуться к меню сета или выбрать другой сет.";
-      elCounter.textContent = `${totalPlanned}/${totalPlanned}`;
-      elMode.textContent = "завершено";
+      wordEl.textContent = "Готово ✅";
+      transEl.textContent = "Сессия завершена.";
+      transEl.classList.remove("hidden");
+      exampleBox.classList.add("hidden");
       btnExample.classList.add("hidden");
+      counter.textContent = `${totalPlanned}/${totalPlanned}`;
+      modeEl.textContent = "завершено";
       return;
     }
 
     const item = q[0];
-    setFace(item);
+    const front = currentStudyMode === "kb" ? item.word : item.trans;
+    const back = currentStudyMode === "kb" ? item.trans : item.word;
 
-    const done = totalPlanned - (mainQueue.length + (round === "repeat" ? repeatQueue.length : 0));
-    elCounter.textContent = `${done}/${totalPlanned}`;
-    elMode.textContent = `${round === "main" ? "основной круг" : "повтор"} • ${studyMode === "KB_FRONT" ? "лицевая: КБ" : "лицевая: RU"}`;
+    wordEl.textContent = front;
+    transEl.textContent = back;
 
-    const ex = (item.example || "").trim();
-    if (ex) { btnExample.disabled = false; exampleBox.textContent = ex; }
-    else { btnExample.disabled = true; exampleBox.textContent = "Примера нет для этого слова."; }
+    const done = totalPlanned - q.length - (round === "repeat" ? 0 : 0);
+    counter.textContent = `${Math.max(0, totalPlanned - (mainQueue.length + (round === "repeat" ? repeatQueue.length : 0)))}/${totalPlanned}`;
+    modeEl.textContent = (round === "main" ? "основной круг" : "повтор") + " • " + (currentStudyMode === "kb" ? "КБ → RU" : "RU → КБ");
   }
 
-  // flip by tap
-  elCard.addEventListener("click", (e) => {
-    // чтобы клик по кнопке примера не переворачивал карточку
-    const t = e.target;
-    if (t && (t.id === "btnExample")) return;
-    if (t && t.closest && t.closest("#btnExample")) return;
-
-    setRoundIfNeeded();
-    const q = currentQueue();
-    if (!q.length) return;
-
-    flipped = !flipped;
-    // просто обновим отображение текущего слова
-    setFace(q[0]);
+  // Tap: flip (show/hide translation)
+  card.addEventListener("click", (e) => {
+    // don't treat clicking example button as flip
+    if (e.target && (e.target.id === "btnExample")) return;
+    transEl.classList.toggle("hidden");
   });
 
+  // Example button
   btnExample.addEventListener("click", () => {
-    const isHidden = exampleBox.classList.contains("hidden");
-    if (isHidden) { exampleBox.classList.remove("hidden"); btnExample.textContent = "Скрыть пример"; }
-    else { exampleBox.classList.add("hidden"); btnExample.textContent = "Показать пример"; }
+    const item = currentQueue()[0];
+    if (!item) return;
+    const ex = (item.example || "").trim();
+    if (!ex) {
+      exampleBox.textContent = "Пример пока не добавлен.";
+    } else {
+      exampleBox.textContent = ex;
+    }
+    exampleBox.classList.toggle("hidden");
   });
-
-  function animateSwipe(dir) {
-    elCard.style.transition = "transform 0.18s ease, opacity 0.18s ease";
-    elCard.style.transform = `translateX(${dir * 180}px) rotate(${dir * 6}deg)`;
-    elCard.style.opacity = "0.2";
-    setTimeout(() => {
-      elCard.style.transition = "none";
-      elCard.style.transform = "translateX(0) rotate(0)";
-      elCard.style.opacity = "1";
-      renderCard();
-    }, 190);
-  }
 
   function swipeDecision(known) {
     setRoundIfNeeded();
     const q = currentQueue();
     if (!q.length) return;
 
-    // свайп можно делать БЕЗ переворота — просто фиксируем решение
+    // close back & example
+    transEl.classList.add("hidden");
+    exampleBox.classList.add("hidden");
+
     const item = q.shift();
     if (!known) repeatQueue.push(item);
 
-    // после свайпа всегда возвращаем карточку на лицевую сторону
-    flipped = false;
-    elTrans.classList.add("hidden");
-    elTrans.textContent = "";
+    // When main is empty, switch to repeat
+    if (round === "main" && mainQueue.length === 0) round = "repeat";
 
-    animateSwipe(known ? 1 : -1);
+    renderStudyCard();
   }
 
   btnYes.addEventListener("click", () => swipeDecision(true));
   btnNo.addEventListener("click", () => swipeDecision(false));
 
-  // swipe gestures
+  // Swipe gestures
   let startX = 0, startY = 0, dragging = false;
 
-  elCard.addEventListener("touchstart", (e) => {
+  card.addEventListener("touchstart", (e) => {
     if (!e.touches?.[0]) return;
     dragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-    elCard.style.transition = "none";
   }, { passive: true });
 
-  elCard.addEventListener("touchmove", (e) => {
+  card.addEventListener("touchmove", (e) => {
     if (!dragging || !e.touches?.[0]) return;
     const dx = e.touches[0].clientX - startX;
     const dy = e.touches[0].clientY - startY;
     if (Math.abs(dy) > Math.abs(dx)) return;
-    const rot = Math.max(-10, Math.min(10, dx / 18));
-    elCard.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
   }, { passive: true });
 
-  elCard.addEventListener("touchend", (e) => {
+  card.addEventListener("touchend", (e) => {
     if (!dragging) return;
     dragging = false;
     const endX = (e.changedTouches?.[0]?.clientX ?? startX);
     const dx = endX - startX;
     const threshold = 70;
+
     if (dx > threshold) swipeDecision(true);
     else if (dx < -threshold) swipeDecision(false);
-    else {
-      elCard.style.transition = "transform 0.18s ease";
-      elCard.style.transform = "translateX(0) rotate(0)";
+  });
+
+  btnBackToSetMenu.addEventListener("click", openSetMenu);
+
+  // ---------- Global test (only global, with dict filter)
+  let testMode = "kb"; // kb: Q=word, A=trans; ru: Q=trans, A=word
+  let testItems = [];
+  let testIndex = 0;
+  let testCorrect = 0;
+  let testLocked = false;
+
+  function openGlobalTestMenu() {
+    const dicts = dictsFrom(DATA);
+    globalDictSelect.innerHTML = [
+      `<option value="__all__">Все словари</option>`,
+      ...dicts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(dictTitle(d))}</option>`)
+    ].join("");
+    globalDictSelect.value = "__all__";
+    updateGlobalTestInfo();
+    globalDictSelect.onchange = updateGlobalTestInfo;
+
+    showView(viewGlobalTestMenu);
+  }
+
+  function updateGlobalTestInfo() {
+    const val = globalDictSelect.value || "__all__";
+    const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
+    const scopeName = (val === "__all__") ? "Все словари" : dictTitle(val);
+    globalTestInfo.textContent = `Источник: ${scopeName} • Слов: ${pool.length}`;
+  }
+
+  btnGlobalTest.addEventListener("click", openGlobalTestMenu);
+  btnGlobalTestBack.addEventListener("click", () => showView(viewDicts));
+  btnGlobalModeKb.addEventListener("click", () => { testMode = "kb"; startTest(); });
+  btnGlobalModeRu.addEventListener("click", () => { testMode = "ru"; startTest(); });
+
+  function startTest() {
+    const val = globalDictSelect.value || "__all__";
+    const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
+
+    testItems = shuffle(pool.slice()); // include hidden always
+    testIndex = 0;
+    testCorrect = 0;
+    testLocked = false;
+    btnTestNext.classList.add("hidden");
+    showView(viewTest);
+    renderTestQuestion();
+  }
+
+  function pickOptions(correctItem) {
+    const correct = testMode === "kb" ? correctItem.trans : correctItem.word;
+    const basePool = testItems.length ? testItems : DATA;
+    const pool = basePool.filter(w => w.id !== correctItem.id);
+
+    const opts = [correct];
+    let guard = 0;
+    while (opts.length < 4 && guard < 2000) {
+      guard++;
+      const cand = pool[Math.floor(Math.random() * pool.length)];
+      if (!cand) break;
+      const text = testMode === "kb" ? cand.trans : cand.word;
+      if (!text) continue;
+      if (opts.includes(text)) continue;
+      opts.push(text);
     }
-  });
+    return shuffle(opts);
+  }
 
-  // navigation
-  btnBackToSetMenu.addEventListener("click", () => {
-    openSetMenu();
-    elCounter.textContent = "—";
-    elMode.textContent = "—";
-    flipped = false;
-  });
+  function renderTestQuestion() {
+    testLocked = false;
+    btnTestNext.classList.add("hidden");
 
-  // -------------------- init --------------------
-  (async () => {
-    DATA = await loadWords();
-    if (!Array.isArray(DATA) || !DATA.length) {
-      foldersList.innerHTML = "<div style='opacity:.8'>Нет данных. Проверь доступ к таблице и заголовки: id, folder, set, word, trans, example</div>";
-      showView(viewFolders);
+    if (testIndex >= testItems.length) {
+      testTitle.textContent = "Тест завершён ✅";
+      const pct = Math.round((testCorrect / Math.max(1, testItems.length)) * 100);
+      testProgress.textContent = `Результат: ${testCorrect}/${testItems.length} (${pct}%)`;
+      testQuestion.textContent = "Готово";
+      testOptions.innerHTML = `<button class="optionBtn" id="btnTestAgain">Пройти ещё раз</button>`;
+      document.getElementById("btnTestAgain").addEventListener("click", startTest);
       return;
     }
-    renderFolders();
+
+    const item = testItems[testIndex];
+    const question = testMode === "kb" ? item.word : item.trans;
+    const correctAnswer = testMode === "kb" ? item.trans : item.word;
+
+    testTitle.textContent = "Тест: выбрать перевод";
+    testProgress.textContent = `Вопрос ${testIndex + 1} из ${testItems.length} • Правильно: ${testCorrect}`;
+    testQuestion.textContent = question;
+
+    const options = pickOptions(item);
+    testOptions.innerHTML = options.map(opt => `
+      <button class="optionBtn" data-opt="${escapeHtml(opt)}">${escapeHtml(opt)}</button>
+    `).join("");
+
+    testOptions.querySelectorAll("button.optionBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (testLocked) return;
+        testLocked = true;
+
+        const chosen = btn.getAttribute("data-opt");
+        const buttons = Array.from(testOptions.querySelectorAll("button.optionBtn"));
+
+        buttons.forEach(b => {
+          const val = b.getAttribute("data-opt");
+          if (val === correctAnswer) b.classList.add("correct");
+        });
+
+        if (chosen === correctAnswer) {
+          testCorrect++;
+          btn.classList.add("correct");
+        } else {
+          btn.classList.add("wrong");
+        }
+
+        btnTestNext.classList.remove("hidden");
+      });
+    });
+  }
+
+  btnTestNext.addEventListener("click", () => {
+    testIndex++;
+    renderTestQuestion();
+  });
+
+  btnTestExit.addEventListener("click", () => showView(viewDicts));
+
+  // ---------- Init
+  (async () => {
+    DATA = await loadWords();
+
+    if (!Array.isArray(DATA) || !DATA.length) {
+      dictsList.innerHTML = "<div class='smallNote'>Нет данных. Проверь таблицу и заголовки: id, dict, section, set, word, trans, example</div>";
+      showView(viewDicts);
+      return;
+    }
+
+    // normalize
+    DATA = DATA.map(w => ({
+      ...w,
+      dict: (w.dict || "Словарь").trim() || "Словарь",
+      section: (w.section || "Раздел").trim() || "Раздел",
+    }));
+
+    renderDicts();
   })();
 })();

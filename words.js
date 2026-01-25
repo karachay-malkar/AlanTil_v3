@@ -9,12 +9,11 @@ window.FOLDER_TITLES = {
   "easy": "Простой",
   "mid": "Средний",
   "hard": "Сложный",
-  "mega": "Супер-сложный",
 };
 
 // Тестовые данные (если таблица недоступна)
 window.WORDS_FALLBACK = [
   { id: 1, folder: "easy", set: 1, word: "салам", trans: "привет", example: "Салам! Къалайса?" },
-  { id: 2, folder: "easy", set: 1, word: "сау бол", trans: "спасибо", example: "Сау бол, кёрюшюрбюз!" },
-  { id: 3, folder: "verbs", set: 1, word: "барыргъа", trans: "идти/ехать", example: "Мен барыргъа керекме" },
+  { id: 2, folder: "easy", set: 1, word: "сау бол", trans: "пока", example: "Сау бол, кёрюшюрбюз!" },
+  { id: 3, folder: "verbs", set: 1, word: "барыргъа", trans: "идти/ехать", example: "" },
 ];
