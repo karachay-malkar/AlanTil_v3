@@ -4,13 +4,23 @@
 
   const viewFolders = document.getElementById("viewFolders");
   const viewSets = document.getElementById("viewSets");
+  const viewSetMenu = document.getElementById("viewSetMenu");
   const viewStudy = document.getElementById("viewStudy");
-  const viewManage = document.getElementById("viewManage");
 
   const foldersList = document.getElementById("foldersList");
   const setsTitle = document.getElementById("setsTitle");
   const setsList = document.getElementById("setsList");
   const btnBackToFolders = document.getElementById("btnBackToFolders");
+
+  const setMenuTitle = document.getElementById("setMenuTitle");
+  const setMenuInfo = document.getElementById("setMenuInfo");
+  const setSearchInput = document.getElementById("setSearchInput");
+  const setWordsList = document.getElementById("setWordsList");
+  const btnSetShowAll = document.getElementById("btnSetShowAll");
+  const btnSetHideAll = document.getElementById("btnSetHideAll");
+  const btnModeKb = document.getElementById("btnModeKb");
+  const btnModeRu = document.getElementById("btnModeRu");
+  const btnBackToSets2 = document.getElementById("btnBackToSets2");
 
   const elCard = document.getElementById("card");
   const elWord = document.getElementById("word");
@@ -19,21 +29,12 @@
   const elMode = document.getElementById("mode");
   const btnExample = document.getElementById("btnExample");
   const exampleBox = document.getElementById("exampleBox");
-
   const btnYes = document.getElementById("btnYes");
   const btnNo = document.getElementById("btnNo");
-  const btnBackToSets = document.getElementById("btnBackToSets");
-  const btnEdit = document.getElementById("btnEdit");
+  const btnBackToSetMenu = document.getElementById("btnBackToSetMenu");
 
-  const manageInfo = document.getElementById("manageInfo");
-  const searchInput = document.getElementById("searchInput");
-  const manageList = document.getElementById("manageList");
-  const btnShowAll = document.getElementById("btnShowAll");
-  const btnHideAll = document.getElementById("btnHideAll");
-  const btnManageDone = document.getElementById("btnManageDone");
-  const btnManageCancel = document.getElementById("btnManageCancel");
-
-  const HIDDEN_KEY = "fc_hidden_by_set_v3";
+  // -------------------- persistent hidden words per set --------------------
+  const HIDDEN_KEY = "fc_hidden_by_set_v4";
   function loadHiddenMap() { try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || "{}"); } catch { return {}; } }
   function saveHiddenMap(map) { localStorage.setItem(HIDDEN_KEY, JSON.stringify(map)); }
   function keyOf(folder, setNo) { return `${folder}:${setNo}`; }
@@ -48,7 +49,8 @@
     saveHiddenMap(map);
   }
 
-  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v3";
+  // -------------------- loading words --------------------
+  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v4";
   function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch { return null; } }
   function saveCache(data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {} }
 
@@ -124,8 +126,8 @@
         id: Number(cols[idx("id")] || 0),
         folder: String(cols[idx("folder")] || "").trim(),
         set: Number(cols[idx("set")] || 0),
-        word: String(cols[idx("word")] || "").trim(),
-        trans: String(cols[idx("trans")] || "").trim(),
+        word: String(cols[idx("word")] || "").trim(),   // КБ
+        trans: String(cols[idx("trans")] || "").trim(), // RU
         example: String(cols[idx("example")] || "").trim(),
       };
       if (!obj.id || !obj.folder || !obj.set || !obj.word || !obj.trans) continue;
@@ -134,21 +136,16 @@
     return out;
   }
 
+  // -------------------- helpers --------------------
   function showView(which) {
-    [viewFolders, viewSets, viewStudy, viewManage].forEach(v => v.classList.add("hidden"));
+    [viewFolders, viewSets, viewSetMenu, viewStudy].forEach(v => v.classList.add("hidden"));
     which.classList.remove("hidden");
   }
-
   function uniq(arr) { return Array.from(new Set(arr)); }
   function sortNatural(a, b) { return String(a).localeCompare(String(b), "ru", { numeric: true, sensitivity: "base" }); }
-
   function foldersFrom(words) { return uniq(words.map(w => w.folder)).sort(sortNatural); }
-  function setsFrom(words, folder) {
-    return uniq(words.filter(w => w.folder === folder).map(w => Number(w.set))).sort((a,b)=>a-b);
-  }
-  function wordsFor(words, folder, setNo) {
-    return words.filter(w => w.folder === folder && Number(w.set) === Number(setNo));
-  }
+  function setsFrom(words, folder) { return uniq(words.filter(w => w.folder === folder).map(w => Number(w.set))).sort((a,b)=>a-b); }
+  function wordsFor(words, folder, setNo) { return words.filter(w => w.folder === folder && Number(w.set) === Number(setNo)); }
   function escapeHtml(s) {
     return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
   }
@@ -156,22 +153,41 @@
     const map = window.FOLDER_TITLES || {};
     return map[code] || code;
   }
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
 
+  // -------------------- state --------------------
   let DATA = [];
   let currentFolder = "";
   let currentSet = 1;
 
+  // режим: KB_FRONT = учим КБ (на лицевой КБ), RU_FRONT = учим RU (на лицевой RU)
+  let studyMode = "KB_FRONT";
+
+  // queues
   let mainQueue = [];
   let repeatQueue = [];
   let round = "main";
   let totalPlanned = 0;
 
+  // flip
+  let flipped = false;
+
   function setRoundIfNeeded() { if (round === "main" && mainQueue.length === 0) round = "repeat"; }
   function currentQueue() { return round === "main" ? mainQueue : repeatQueue; }
 
+  // -------------------- folders / sets --------------------
   function renderFolders() {
     const folders = foldersFrom(DATA);
-    foldersList.innerHTML = folders.map(f => `<button class="btn" data-folder="${escapeHtml(f)}">${escapeHtml(folderTitle(f))}</button>`).join("");
+    foldersList.innerHTML = folders
+      .map(f => `<button class="btn" data-folder="${escapeHtml(f)}">${escapeHtml(folderTitle(f))}</button>`)
+      .join("");
+
     foldersList.querySelectorAll("button[data-folder]").forEach(btn => {
       btn.addEventListener("click", () => {
         currentFolder = btn.getAttribute("data-folder");
@@ -179,6 +195,7 @@
         showView(viewSets);
       });
     });
+
     showView(viewFolders);
   }
 
@@ -191,63 +208,143 @@
       const hidden = getHiddenSet(folder, s);
       const active = all.filter(w => !hidden.has(w.id));
       return `
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <button class="btn" data-start-set="${s}">
-            Сет ${s}<br/><span style="opacity:.75;font-weight:800;font-size:12px;">${active.length}/${all.length} в сессии</span>
-          </button>
-          <button class="btn" data-shuffle-set="${s}" style="opacity:.9;">Начать (перемешать)</button>
-        </div>
+        <button class="btn" data-open-set="${s}">
+          Сет ${s}<br/>
+          <span style="opacity:.75;font-weight:800;font-size:12px;">${active.length}/${all.length} в сессии</span>
+        </button>
       `;
     }).join("");
 
-    setsList.querySelectorAll("button[data-start-set]").forEach(btn => {
-      btn.addEventListener("click", () => { currentSet = Number(btn.getAttribute("data-start-set")); startSession(false); });
-    });
-    setsList.querySelectorAll("button[data-shuffle-set]").forEach(btn => {
-      btn.addEventListener("click", () => { currentSet = Number(btn.getAttribute("data-shuffle-set")); startSession(true); });
+    setsList.querySelectorAll("button[data-open-set]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentSet = Number(btn.getAttribute("data-open-set"));
+        openSetMenu();
+      });
     });
   }
 
   btnBackToFolders.addEventListener("click", () => showView(viewFolders));
-  btnBackToSets.addEventListener("click", () => {
+  btnBackToSets2.addEventListener("click", () => {
     renderSets(currentFolder);
     showView(viewSets);
     elCounter.textContent = "—";
     elMode.textContent = "—";
   });
 
-  function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
+  // -------------------- set menu (modes + list with hide) --------------------
+  let menuHidden = new Set();
+
+  function openSetMenu() {
+    menuHidden = getHiddenSet(currentFolder, currentSet);
+
+    const all = wordsFor(DATA, currentFolder, currentSet);
+    const active = all.filter(w => !menuHidden.has(w.id));
+
+    setMenuTitle.textContent = `${folderTitle(currentFolder)} • Сет ${currentSet}`;
+    setMenuInfo.textContent = `Слов в сете: ${all.length}. В сессии: ${active.length}. (Скрытые можно вернуть галочками ниже)`;
+
+    setSearchInput.value = "";
+    renderSetWordsList();
+    showView(viewSetMenu);
   }
 
-  function startSession(shuffleOnStart) {
+  function renderSetWordsList() {
+    const q = (setSearchInput.value || "").trim().toLowerCase();
+    const all = wordsFor(DATA, currentFolder, currentSet);
+    const filtered = q ? all.filter(w => (w.word + " " + w.trans).toLowerCase().includes(q)) : all;
+
+    setWordsList.innerHTML = filtered.map(w => {
+      const checked = !menuHidden.has(w.id);
+      return `
+        <div class="item" data-id="${w.id}">
+          <input class="checkbox" type="checkbox" ${checked ? "checked" : ""} />
+          <div>
+            <div class="w">${escapeHtml(w.word)}</div>
+            <div class="t">${escapeHtml(w.trans)}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    setWordsList.querySelectorAll(".item").forEach(row => {
+      const id = Number(row.getAttribute("data-id"));
+      const cb = row.querySelector("input[type=checkbox]");
+      cb.addEventListener("change", () => {
+        if (cb.checked) menuHidden.delete(id);
+        else menuHidden.add(id);
+        // persist immediately
+        setHiddenSet(currentFolder, currentSet, menuHidden);
+        // update info
+        const all2 = wordsFor(DATA, currentFolder, currentSet);
+        const active2 = all2.filter(w => !menuHidden.has(w.id));
+        setMenuInfo.textContent = `Слов в сете: ${all2.length}. В сессии: ${active2.length}. (Скрытые можно вернуть галочками ниже)`;
+      });
+    });
+  }
+
+  setSearchInput.addEventListener("input", renderSetWordsList);
+  btnSetShowAll.addEventListener("click", () => {
+    menuHidden = new Set();
+    setHiddenSet(currentFolder, currentSet, menuHidden);
+    renderSetWordsList();
+    const all = wordsFor(DATA, currentFolder, currentSet);
+    setMenuInfo.textContent = `Слов в сете: ${all.length}. В сессии: ${all.length}. (Скрытые можно вернуть галочками ниже)`;
+  });
+  btnSetHideAll.addEventListener("click", () => {
+    menuHidden = new Set(wordsFor(DATA, currentFolder, currentSet).map(w => w.id));
+    setHiddenSet(currentFolder, currentSet, menuHidden);
+    renderSetWordsList();
+    const all = wordsFor(DATA, currentFolder, currentSet);
+    setMenuInfo.textContent = `Слов в сете: ${all.length}. В сессии: 0. (Скрытые можно вернуть галочками ниже)`;
+  });
+
+  btnModeKb.addEventListener("click", () => { studyMode = "KB_FRONT"; startSession(); });
+  btnModeRu.addEventListener("click", () => { studyMode = "RU_FRONT"; startSession(); });
+
+  // -------------------- study session --------------------
+  function startSession() {
     const all = wordsFor(DATA, currentFolder, currentSet);
     const hidden = getHiddenSet(currentFolder, currentSet);
     const active = all.filter(w => !hidden.has(w.id));
 
-    mainQueue = active.slice();
-    if (shuffleOnStart) shuffle(mainQueue);
+    mainQueue = shuffle(active.slice()); // ВСЕГДА перемешиваем
     repeatQueue = [];
     round = "main";
     totalPlanned = active.length;
+    flipped = false;
 
     showView(viewStudy);
     renderCard();
   }
 
+  function setFace(item) {
+    // Лицевая: один язык. Оборот: второй язык.
+    const front = (studyMode === "KB_FRONT") ? item.word : item.trans;
+    const back  = (studyMode === "KB_FRONT") ? item.trans : item.word;
+
+    elWord.textContent = front;
+
+    if (flipped) {
+      elTrans.textContent = back;
+      elTrans.classList.remove("hidden");
+    } else {
+      elTrans.textContent = "";
+      elTrans.classList.add("hidden");
+    }
+  }
+
   function renderCard() {
     setRoundIfNeeded();
     const q = currentQueue();
+
+    // reset example UI
     exampleBox.classList.add("hidden");
     btnExample.textContent = "Показать пример";
 
     if (totalPlanned === 0) {
       elWord.textContent = "Пусто 🤷‍♂️";
-      elTrans.textContent = "В этом сете все слова скрыты. Нажми “Редактировать список” и верни нужные.";
+      elTrans.classList.remove("hidden");
+      elTrans.textContent = "В этом сете все слова скрыты. Верни нужные в меню сета.";
       elCounter.textContent = "0/0";
       elMode.textContent = "—";
       btnExample.classList.add("hidden");
@@ -257,7 +354,8 @@
 
     if (q.length === 0) {
       elWord.textContent = "Готово ✅";
-      elTrans.textContent = "Сессия завершена. Можно выбрать другой сет.";
+      elTrans.classList.remove("hidden");
+      elTrans.textContent = "Сессия завершена. Можно вернуться к меню сета или выбрать другой сет.";
       elCounter.textContent = `${totalPlanned}/${totalPlanned}`;
       elMode.textContent = "завершено";
       btnExample.classList.add("hidden");
@@ -265,17 +363,32 @@
     }
 
     const item = q[0];
-    elWord.textContent = item.word;
-    elTrans.textContent = item.trans;
+    setFace(item);
 
     const done = totalPlanned - (mainQueue.length + (round === "repeat" ? repeatQueue.length : 0));
     elCounter.textContent = `${done}/${totalPlanned}`;
-    elMode.textContent = round === "main" ? "основной круг" : "повтор";
+    elMode.textContent = `${round === "main" ? "основной круг" : "повтор"} • ${studyMode === "KB_FRONT" ? "лицевая: КБ" : "лицевая: RU"}`;
 
     const ex = (item.example || "").trim();
     if (ex) { btnExample.disabled = false; exampleBox.textContent = ex; }
     else { btnExample.disabled = true; exampleBox.textContent = "Примера нет для этого слова."; }
   }
+
+  // flip by tap
+  elCard.addEventListener("click", (e) => {
+    // чтобы клик по кнопке примера не переворачивал карточку
+    const t = e.target;
+    if (t && (t.id === "btnExample")) return;
+    if (t && t.closest && t.closest("#btnExample")) return;
+
+    setRoundIfNeeded();
+    const q = currentQueue();
+    if (!q.length) return;
+
+    flipped = !flipped;
+    // просто обновим отображение текущего слова
+    setFace(q[0]);
+  });
 
   btnExample.addEventListener("click", () => {
     const isHidden = exampleBox.classList.contains("hidden");
@@ -299,15 +412,25 @@
     setRoundIfNeeded();
     const q = currentQueue();
     if (!q.length) return;
+
+    // свайп можно делать БЕЗ переворота — просто фиксируем решение
     const item = q.shift();
     if (!known) repeatQueue.push(item);
+
+    // после свайпа всегда возвращаем карточку на лицевую сторону
+    flipped = false;
+    elTrans.classList.add("hidden");
+    elTrans.textContent = "";
+
     animateSwipe(known ? 1 : -1);
   }
 
   btnYes.addEventListener("click", () => swipeDecision(true));
   btnNo.addEventListener("click", () => swipeDecision(false));
 
+  // swipe gestures
   let startX = 0, startY = 0, dragging = false;
+
   elCard.addEventListener("touchstart", (e) => {
     if (!e.touches?.[0]) return;
     dragging = true;
@@ -333,46 +456,21 @@
     const threshold = 70;
     if (dx > threshold) swipeDecision(true);
     else if (dx < -threshold) swipeDecision(false);
-    else { elCard.style.transition = "transform 0.18s ease"; elCard.style.transform = "translateX(0) rotate(0)"; }
+    else {
+      elCard.style.transition = "transform 0.18s ease";
+      elCard.style.transform = "translateX(0) rotate(0)";
+    }
   });
 
-  let manageHidden = new Set();
-  function openManage() {
-    manageHidden = getHiddenSet(currentFolder, currentSet);
-    const all = wordsFor(DATA, currentFolder, currentSet);
-    manageInfo.textContent = `${folderTitle(currentFolder)} • Сет ${currentSet} • всего слов: ${all.length}`;
-    searchInput.value = "";
-    renderManageList();
-    showView(viewManage);
-  }
-  function renderManageList() {
-    const q = (searchInput.value || "").trim().toLowerCase();
-    const all = wordsFor(DATA, currentFolder, currentSet);
-    const filtered = q ? all.filter(w => (w.word + " " + w.trans).toLowerCase().includes(q)) : all;
-    manageList.innerHTML = filtered.map(w => {
-      const checked = !manageHidden.has(w.id);
-      return `
-        <div class="item" data-id="${w.id}">
-          <input class="checkbox" type="checkbox" ${checked ? "checked" : ""} />
-          <div><div class="w">${escapeHtml(w.word)}</div><div class="t">${escapeHtml(w.trans)}</div></div>
-        </div>
-      `;
-    }).join("");
+  // navigation
+  btnBackToSetMenu.addEventListener("click", () => {
+    openSetMenu();
+    elCounter.textContent = "—";
+    elMode.textContent = "—";
+    flipped = false;
+  });
 
-    manageList.querySelectorAll(".item").forEach(row => {
-      const id = Number(row.getAttribute("data-id"));
-      const cb = row.querySelector("input[type=checkbox]");
-      cb.addEventListener("change", () => { if (cb.checked) manageHidden.delete(id); else manageHidden.add(id); });
-    });
-  }
-  searchInput.addEventListener("input", renderManageList);
-  btnShowAll.addEventListener("click", () => { manageHidden = new Set(); renderManageList(); });
-  btnHideAll.addEventListener("click", () => { manageHidden = new Set(wordsFor(DATA, currentFolder, currentSet).map(w => w.id)); renderManageList(); });
-
-  btnManageDone.addEventListener("click", () => { setHiddenSet(currentFolder, currentSet, manageHidden); showView(viewStudy); startSession(false); });
-  btnManageCancel.addEventListener("click", () => showView(viewStudy));
-  btnEdit.addEventListener("click", openManage);
-
+  // -------------------- init --------------------
   (async () => {
     DATA = await loadWords();
     if (!Array.isArray(DATA) || !DATA.length) {
