@@ -17,33 +17,66 @@
   </header>
 
   <main class="wrap">
+    <!-- ПАПКИ -->
     <section id="viewFolders" class="view">
       <div class="panel">
         <div class="panelTitle">Папки</div>
-        <div id="foldersList" class="grid"></div>
+        <div id="foldersList" class="stack"></div>
         <div class="smallNote">Папки и сеты строятся автоматически из данных (folder + set).</div>
       </div>
     </section>
 
+    <!-- СПИСОК СЕТОВ В ПАПКЕ -->
     <section id="viewSets" class="view hidden">
       <div class="panel">
         <div class="panelTitle" id="setsTitle">Сеты</div>
-        <div id="setsList" class="grid"></div>
+        <div id="setsList" class="stack"></div>
         <div class="row">
           <button id="btnBackToFolders" class="btn ghost">← Папки</button>
         </div>
       </div>
     </section>
 
+    <!-- МЕНЮ СЕТА: выбор режима + список слов с возможностью скрыть -->
+    <section id="viewSetMenu" class="view hidden">
+      <div class="panel">
+        <div class="panelTitle" id="setMenuTitle">Сет</div>
+
+        <div class="row">
+          <button id="btnModeKb" class="btn primary">Учить на КБ</button>
+          <button id="btnModeRu" class="btn secondary">Учить на RU</button>
+        </div>
+
+        <div class="smallNote" id="setMenuInfo">—</div>
+
+        <label class="field">
+          <span>Поиск в сете</span>
+          <input id="setSearchInput" type="text" placeholder="например: суу / вода" />
+        </label>
+
+        <div class="row">
+          <button id="btnSetShowAll" class="btn">Показать все</button>
+          <button id="btnSetHideAll" class="btn">Скрыть все</button>
+        </div>
+
+        <div id="setWordsList" class="list"></div>
+
+        <div class="row">
+          <button id="btnBackToSets2" class="btn ghost">← К сетам</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- СЕССИЯ -->
     <section id="viewStudy" class="view hidden study">
       <div id="card" class="card big" aria-label="Карточка">
         <div class="word" id="word">слово</div>
-        <div class="trans" id="trans">перевод</div>
+        <div class="trans hidden" id="trans">перевод</div>
 
         <button id="btnExample" class="btn mini">Показать пример</button>
         <div id="exampleBox" class="example hidden"></div>
 
-        <div class="hint">Свайп: вправо — знаю, влево — повторить</div>
+        <div class="hint">Тап — перевернуть. Свайп: вправо — знаю, влево — повторить</div>
       </div>
 
       <div class="buttons">
@@ -52,34 +85,7 @@
       </div>
 
       <div class="footer">
-        <button id="btnEdit" class="btn ghost">Редактировать список</button>
-        <button id="btnBackToSets" class="btn ghost">К сетам</button>
-      </div>
-    </section>
-
-    <section id="viewManage" class="view hidden">
-      <div class="panel">
-        <div class="panelTitle">Редактирование списка</div>
-        <div class="hintText" id="manageInfo">—</div>
-
-        <label class="field">
-          <span>Поиск</span>
-          <input id="searchInput" type="text" placeholder="например: суу / вода" />
-        </label>
-
-        <div class="row">
-          <button id="btnShowAll" class="btn">Показать все</button>
-          <button id="btnHideAll" class="btn">Скрыть все</button>
-        </div>
-
-        <div id="manageList" class="list"></div>
-
-        <div class="row">
-          <button id="btnManageDone" class="btn primary">Готово</button>
-          <button id="btnManageCancel" class="btn ghost">Отмена</button>
-        </div>
-
-        <div class="smallNote">Скрытые слова не удаляются. Можно вернуть их в любое время.</div>
+        <button id="btnBackToSetMenu" class="btn ghost">К меню сета</button>
       </div>
     </section>
   </main>
