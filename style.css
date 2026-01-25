@@ -63,13 +63,11 @@ body{
   color: var(--text-main);
 }
 
-.grid{
-  display:grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
+/* ВАЖНО: кнопки папок/сетов вертикально, друг под другом */
+.stack{
+  display:flex;
+  flex-direction:column;
   gap: 10px;
-}
-@media (min-width:520px){
-  .grid{ grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
 
 .field{ display:grid; gap:6px; margin:10px 0; }
@@ -126,7 +124,7 @@ input{
 }
 
 .smallNote{
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.35;
