@@ -82,7 +82,7 @@
   }
 
   // ---------- Cache
-  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v4";
+  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v3";
   function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch { return null; } }
   function saveCache(data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {} }
 
@@ -192,6 +192,65 @@
   function sortNatural(a, b) { return String(a).localeCompare(String(b), "ru", { numeric: true, sensitivity: "base" }); }
   function escapeHtml(s) {
     return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  // Split "a, b; c, d" into blocks and pills
+  // Major separator: semicolon (;). Inside each block: comma (,). Also supports slash (/) as an optional separator.
+  function parseMulti(text) {
+    const raw = String(text || "").trim();
+    if (!raw) return [];
+    // Major blocks by semicolon or newline
+    const blocks = raw
+      .split(/\s*[;；]\s*|\n+/g)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const splitPills = (s) => {
+      // First split by commas
+      let parts = s.split(/\s*,\s*/g);
+
+      // Then (optionally) split parts by slashes if it looks like alternatives
+      const out = [];
+      for (const p of parts) {
+        const pp = String(p || "").trim();
+        if (!pp) continue;
+        // if there is a slash, split, but keep very short combos like "и/или" together
+        if (pp.includes("/") && !/^[^\s]{1,4}\/[^\s]{1,4}$/.test(pp)) {
+          const bySlash = pp.split(/\s*\/\s*/g).map(x => x.trim()).filter(Boolean);
+          out.push(...bySlash);
+        } else {
+          out.push(pp);
+        }
+      }
+      return out;
+    };
+
+    return blocks.map(b => splitPills(b)).filter(arr => arr.length);
+  }
+
+  function renderMultiHtml(text) {
+    const groups = parseMulti(text);
+    if (!groups.length) return "";
+    // If only one group with one pill — render as simple text (keeps current look)
+    if (groups.length === 1 && groups[0].length <= 1) return escapeHtml(groups[0][0] || "");
+    return `
+      <div class="multi">
+        ${groups.map((pills, i) => `
+          <div class="multiRow">
+            <span class="multiNum">${i + 1}</span>
+            <div class="multiPills">
+              ${pills.map(p => `<span class="pill">${escapeHtml(p)}</span>`).join("")}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function setRichOrText(el, text) {
+    const html = renderMultiHtml(text);
+    if (html) el.innerHTML = html;
+    else el.textContent = "";
   }
   function dictTitle(code) { return (window.DICT_TITLES || {})[code] || code; }
   function sectionTitle(code) { return (window.SECTION_TITLES || {})[code] || code; }
@@ -414,8 +473,8 @@
     const front = currentStudyMode === "kb" ? item.word : item.trans;
     const back = currentStudyMode === "kb" ? item.trans : item.word;
 
-    wordEl.textContent = front;
-    transEl.textContent = back;
+    setRichOrText(wordEl, front);
+    setRichOrText(transEl, back);
 
     const done = totalPlanned - q.length - (round === "repeat" ? 0 : 0);
     counter.textContent = `${Math.max(0, totalPlanned - (mainQueue.length + (round === "repeat" ? repeatQueue.length : 0)))}/${totalPlanned}`;
@@ -437,7 +496,7 @@
     if (!ex) {
       exampleBox.textContent = "Пример пока не добавлен.";
     } else {
-      exampleBox.textContent = ex;
+      setRichOrText(exampleBox, ex);
     }
     exampleBox.classList.toggle("hidden");
   });
@@ -529,7 +588,7 @@
     const val = globalDictSelect.value || "__all__";
     const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
 
-    testItems = shuffle(pool.slice()).slice(0,50); // include hidden always
+    testItems = shuffle(pool.slice()); // include hidden always
     testIndex = 0;
     testCorrect = 0;
     testLocked = false;

@@ -13,7 +13,7 @@ window.FOLDER_TITLES = {
 
 // Тестовые данные (если таблица недоступна)
 window.WORDS_FALLBACK = [
-  { id: 1, folder: "easy", set: 1, word: "салам", trans: "привет", example: "Салам! Къалайса?" },
-  { id: 2, folder: "easy", set: 1, word: "сау бол", trans: "пока", example: "Сау бол, кёрюшюрбюз!" },
-  { id: 3, folder: "verbs", set: 1, word: "барыргъа", trans: "идти/ехать", example: "" },
+  { id: 1, folder: "easy", set: 1, word: "окъургъа", trans: "читать", example: "китабны окъургъа - читать книгу" },
+  { id: 2, folder: "easy", set: 1, word: "сау бол", trans: "спасибо", example: "Сау бол - спасибо" },
+  { id: 3, folder: "easy", set: 1, word: "барыргъа", trans: "идти, ехать", example: "мен юйге барама - я иду домой" },
 ];

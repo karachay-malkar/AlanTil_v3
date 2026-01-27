@@ -245,3 +245,56 @@ select{
   border-color: rgba(239,68,68,0.45);
   background: rgba(239,68,68,0.10);
 }
+
+
+/* --- Multi-meaning / multi-example formatting --- */
+.multi{
+  margin-top: 6px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  align-items: center;
+}
+.multiRow{
+  width: 100%;
+  display:flex;
+  gap: 10px;
+  align-items:flex-start;
+  justify-content:center;
+  flex-wrap: nowrap;
+}
+.multiNum{
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight: 950;
+  font-size: 13px;
+  color: #ffffff;
+  background: var(--brand-dark);
+  box-shadow: 0 6px 14px rgba(17,169,232,0.22);
+  margin-top: 2px;
+}
+.multiPills{
+  display:flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content:center;
+}
+.pill{
+  display:inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(17,169,232,0.25);
+  background: rgba(17,169,232,0.06);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+/* size tuning when rich blocks appear in 'word' (front side) */
+.word .pill{ font-size: 20px; padding: 10px 14px; }
+.word .multiNum{ width: 30px; height: 30px; font-size: 14px; }
+.trans .pill{ font-size: 16px; }
