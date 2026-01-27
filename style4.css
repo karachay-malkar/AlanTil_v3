@@ -263,6 +263,9 @@ select{
   justify-content:center;
   flex-wrap: nowrap;
 }
+.multiRow.noNum{
+  gap: 0;
+}
 .multiNum{
   flex: 0 0 auto;
   width: 26px;

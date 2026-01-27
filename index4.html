@@ -37,7 +37,7 @@
         <div class="panelTitle" id="sectionsTitle">Разделы</div>
         <div id="sectionsList" class="stack"></div>
         <div class="row">
-          <button id="btnBackToDicts" class="btn ghost">← Назад к словарям</button>
+          <button id="btnBackToDicts" class="btn ghost">← Словари</button>
         </div>
       </div>
     </section>
@@ -48,7 +48,7 @@
         <div class="panelTitle" id="setsTitle">Сеты</div>
         <div id="setsList" class="stack"></div>
         <div class="row">
-          <button id="btnBackToSections" class="btn ghost">← Назад к разделам</button>
+          <button id="btnBackToSections" class="btn ghost">← Разделы</button>
         </div>
       </div>
     </section>
@@ -77,7 +77,7 @@
         <div id="setWordsList" class="list"></div>
 
         <div class="row">
-          <button id="btnBackToSets2" class="btn ghost">← Назад к сетам</button>
+          <button id="btnBackToSets2" class="btn ghost">← К сетам</button>
         </div>
       </div>
     </section>
@@ -91,6 +91,20 @@
         <label class="field" style="margin-top:12px;">
           <span>Источник слов</span>
           <select id="globalDictSelect"></select>
+        </label>
+
+        <label class="field" style="margin-top:10px;">
+          <span>Раздел</span>
+          <select id="globalSectionSelect"></select>
+        </label>
+
+        <label class="field" style="margin-top:10px;">
+          <span>Количество слов</span>
+          <select id="testLimit">
+            <option value="30">30</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
         </label>
 
         <div class="row">

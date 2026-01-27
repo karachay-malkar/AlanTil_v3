@@ -53,6 +53,8 @@
   // Global test menu
   const globalTestInfo = document.getElementById("globalTestInfo");
   const globalDictSelect = document.getElementById("globalDictSelect");
+  const globalSectionSelect = document.getElementById("globalSectionSelect");
+  const testLimitSelect = document.getElementById("testLimit");
   const btnGlobalModeKb = document.getElementById("btnGlobalModeKb");
   const btnGlobalModeRu = document.getElementById("btnGlobalModeRu");
   const btnGlobalTestBack = document.getElementById("btnGlobalTestBack");
@@ -82,7 +84,7 @@
   }
 
   // ---------- Cache
-  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v3";
+  const CACHE_KEY = window.WORDS_CACHE_KEY || "fc_words_cache_v4";
   function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || "null"); } catch { return null; } }
   function saveCache(data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch {} }
 
@@ -196,30 +198,36 @@
 
   // Split "a, b; c, d" into blocks and pills
   // Major separator: semicolon (;). Inside each block: comma (,). Also supports slash (/) as an optional separator.
+    function stripLeadingNumber(s) {
+    // removes leading enumerations like "1. ", "2) ", "3 - ", "4: "
+    return String(s || "").replace(/^\s*\d+\s*[\.\)\-:]\s*/u, "").trim();
+  }
   function parseMulti(text) {
     const raw = String(text || "").trim();
     if (!raw) return [];
     // Major blocks by semicolon or newline
     const blocks = raw
       .split(/\s*[;；]\s*|\n+/g)
+      .map(s => stripLeadingNumber(s))
       .map(s => s.trim())
       .filter(Boolean);
 
     const splitPills = (s) => {
       // First split by commas
-      let parts = s.split(/\s*,\s*/g);
+      let parts = String(s || "").split(/\s*,\s*/g);
 
       // Then (optionally) split parts by slashes if it looks like alternatives
       const out = [];
       for (const p of parts) {
-        const pp = String(p || "").trim();
-        if (!pp) continue;
+        const pp0 = stripLeadingNumber(String(p || "").trim());
+        if (!pp0) continue;
+
         // if there is a slash, split, but keep very short combos like "и/или" together
-        if (pp.includes("/") && !/^[^\s]{1,4}\/[^\s]{1,4}$/.test(pp)) {
-          const bySlash = pp.split(/\s*\/\s*/g).map(x => x.trim()).filter(Boolean);
+        if (pp0.includes("/") && !/^[^\s]{1,4}\/[^\s]{1,4}$/.test(pp0)) {
+          const bySlash = pp0.split(/\s*\/\s*/g).map(x => stripLeadingNumber(x.trim())).filter(Boolean);
           out.push(...bySlash);
         } else {
-          out.push(pp);
+          out.push(pp0);
         }
       }
       return out;
@@ -231,8 +239,21 @@
   function renderMultiHtml(text) {
     const groups = parseMulti(text);
     if (!groups.length) return "";
-    // If only one group with one pill — render as simple text (keeps current look)
-    if (groups.length === 1 && groups[0].length <= 1) return escapeHtml(groups[0][0] || "");
+
+    // One meaning: still render as pills (no numbering)
+    if (groups.length === 1) {
+      return `
+        <div class="multi">
+          <div class="multiRow noNum">
+            <div class="multiPills">
+              ${groups[0].map(p => `<span class="pill">${escapeHtml(p)}</span>`).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Multiple meanings: numbered blocks
     return `
       <div class="multi">
         ${groups.map((pills, i) => `
@@ -558,37 +579,65 @@
   let testIndex = 0;
   let testCorrect = 0;
   let testLocked = false;
-
   function openGlobalTestMenu() {
     const dicts = dictsFrom(DATA);
     globalDictSelect.innerHTML = [
       `<option value="__all__">Все словари</option>`,
       ...dicts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(dictTitle(d))}</option>`)
     ].join("");
+
+    function renderSectionsForCurrentDict() {
+      const dval = globalDictSelect.value || "__all__";
+      const pool = (dval === "__all__") ? DATA : DATA.filter(w => w.dict === dval);
+      const sections = uniq(pool.map(w => w.section)).sort(sortNatural);
+
+      globalSectionSelect.innerHTML = [
+        `<option value="__all__">Все разделы</option>`,
+        ...sections.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(sectionTitle(s))}</option>`)
+      ].join("");
+
+      globalSectionSelect.value = "__all__";
+    }
+
     globalDictSelect.value = "__all__";
+    renderSectionsForCurrentDict();
     updateGlobalTestInfo();
-    globalDictSelect.onchange = updateGlobalTestInfo;
+
+    globalDictSelect.onchange = () => {
+      renderSectionsForCurrentDict();
+      updateGlobalTestInfo();
+    };
+    globalSectionSelect.onchange = updateGlobalTestInfo;
 
     showView(viewGlobalTestMenu);
   }
 
   function updateGlobalTestInfo() {
-    const val = globalDictSelect.value || "__all__";
-    const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
-    const scopeName = (val === "__all__") ? "Все словари" : dictTitle(val);
-    globalTestInfo.textContent = `Источник: ${scopeName} • Слов: ${pool.length}`;
+    const dval = globalDictSelect.value || "__all__";
+    const sval = globalSectionSelect.value || "__all__";
+
+    let pool = (dval === "__all__") ? DATA : DATA.filter(w => w.dict === dval);
+    pool = (sval === "__all__") ? pool : pool.filter(w => w.section === sval);
+
+    const scopeDict = (dval === "__all__") ? "Все словари" : dictTitle(dval);
+    const scopeSection = (sval === "__all__") ? "Все разделы" : sectionTitle(sval);
+    globalTestInfo.textContent = `Источник: ${scopeDict} • ${scopeSection} • Слов: ${pool.length}`;
   }
 
   btnGlobalTest.addEventListener("click", openGlobalTestMenu);
   btnGlobalTestBack.addEventListener("click", () => showView(viewDicts));
   btnGlobalModeKb.addEventListener("click", () => { testMode = "kb"; startTest(); });
   btnGlobalModeRu.addEventListener("click", () => { testMode = "ru"; startTest(); });
-
   function startTest() {
-    const val = globalDictSelect.value || "__all__";
-    const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
+    const dval = globalDictSelect.value || "__all__";
+    const sval = globalSectionSelect.value || "__all__";
 
+    let pool = (dval === "__all__") ? DATA : DATA.filter(w => w.dict === dval);
+    pool = (sval === "__all__") ? pool : pool.filter(w => w.section === sval);
+
+    const testLimit = testLimitSelect ? Number(testLimitSelect.value) : 50;
     testItems = shuffle(pool.slice()); // include hidden always
+    if (testItems.length > testLimit) testItems = testItems.slice(0, testLimit);
     testIndex = 0;
     testCorrect = 0;
     testLocked = false;
