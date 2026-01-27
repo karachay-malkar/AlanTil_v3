@@ -588,7 +588,7 @@
     const val = globalDictSelect.value || "__all__";
     const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
 
-    testItems = shuffle(pool.slice()); // include hidden always
+    testItems = shuffle(pool.slice().slice(0,50); // include hidden always
     testIndex = 0;
     testCorrect = 0;
     testLocked = false;
