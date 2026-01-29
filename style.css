@@ -347,3 +347,63 @@ select{
   background: rgba(17,169,232,0.12);
   border-color: rgba(17,169,232,0.45);
 }
+
+
+/* --- Test scope accordion (dicts + sections) --- */
+.testScope{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(17,169,232,0.20);
+  background: rgba(17,169,232,0.06);
+}
+.testScopeList{ display:flex; flex-direction:column; gap: 10px; }
+.scopeDictRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  font-weight: 950;
+}
+.scopeSectionRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin-left: 22px;
+  font-weight: 850;
+  color: var(--text-secondary);
+}
+.scopeCheckbox{
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+}
+.testLimitRow{
+  margin-top: 12px;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.testLimitTitle{
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 900;
+  margin-right: 4px;
+}
+.radioOpt{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,0.10);
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(17,169,232,0.10);
+  font-weight: 900;
+}
+.radioOpt input{
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--brand);
+}

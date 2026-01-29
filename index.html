@@ -88,12 +88,19 @@
         <div class="panelTitle">Тест: выбрать перевод</div>
         <div class="hintText" id="globalTestInfo">—</div>
 
-        <label class="field" style="margin-top:12px;">
-          <span>Источник слов</span>
-          <select id="globalDictSelect"></select>
-        </label>
+        
+        <button id="btnTestScopeToggle" class="btn mini" type="button">Выберите словари и разделы для теста</button>
+        <div id="testScopeBody" class="testScope hidden">
+          <div id="testScopeList" class="testScopeList"></div>
+        </div>
 
-        <div class="row">
+        <div class="testLimitRow">
+          <div class="testLimitTitle">Количество слов</div>
+          <label class="radioOpt"><input type="radio" name="testLimit" value="30"> <span>30</span></label>
+          <label class="radioOpt"><input type="radio" name="testLimit" value="50" checked> <span>50</span></label>
+          <label class="radioOpt"><input type="radio" name="testLimit" value="100"> <span>100</span></label>
+        </div>
+<div class="row">
           <button id="btnGlobalModeKb" class="btn primary">КБ → RU (показать КБ, выбрать перевод)</button>
           <button id="btnGlobalModeRu" class="btn primary">RU → КБ (показать RU, выбрать перевод)</button>
         </div>
