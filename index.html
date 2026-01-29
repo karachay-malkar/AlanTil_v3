@@ -89,16 +89,18 @@
         <div class="hintText" id="globalTestInfo">—</div>
 
         
-        <button id="btnTestScopeToggle" class="btn mini" type="button">Выберите словари и разделы для теста</button>
-        <div id="testScopeBody" class="testScope hidden">
+        <div class="testScopeTitle">Словари и разделы</div>
+        <div id="testScopeBody" class="testScope">
           <div id="testScopeList" class="testScopeList"></div>
         </div>
 
         <div class="testLimitRow">
           <div class="testLimitTitle">Количество слов</div>
+          <div class="testLimitRadios">
           <label class="radioOpt"><input type="radio" name="testLimit" value="30"> <span>30</span></label>
           <label class="radioOpt"><input type="radio" name="testLimit" value="50" checked> <span>50</span></label>
           <label class="radioOpt"><input type="radio" name="testLimit" value="100"> <span>100</span></label>
+          </div>
         </div>
 <div class="row">
           <button id="btnGlobalModeKb" class="btn primary">КБ → RU (показать КБ, выбрать перевод)</button>
@@ -122,7 +124,7 @@
 
         <div class="row">
           <button id="btnTestExit" class="btn ghost">← Выйти</button>
-          <button id="btnTestNext" class="btn primary hidden">Следующий</button>
+          <button id="btnTestNext" class="btn primary hidden" disabled>Дальше</button>
         </div>
       </div>
     </section>

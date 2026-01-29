@@ -212,6 +212,40 @@
     [viewDicts, viewSections, viewSets, viewSetMenu, viewGlobalTestMenu, viewTest, viewStudy].forEach(v => v.classList.add("hidden"));
     which.classList.remove("hidden");
   }
+
+  // ---------- Simple navigation history (so "Назад" from Избранного ведет на главный)
+  function setHistory(screen, mode /* 'push' | 'replace' */) {
+    try {
+      const state = { screen };
+      if (mode === "replace") history.replaceState(state, "");
+      else if (mode === "push") history.pushState(state, "");
+    } catch {}
+  }
+
+  function goHome(opts = {}) {
+    // opts.historyMode: 'push' | 'replace' | null
+    showView(viewDicts);
+    currentDict = "";
+    currentSection = "";
+    currentSet = 1;
+    if (opts.historyMode) setHistory("home", opts.historyMode);
+  }
+
+  function openFavoritesMenu(opts = {}) {
+    // opts.historyMode: 'push' | 'replace' | null
+    currentDict = "__fav__";
+    currentSection = "Избранное";
+    currentSet = 1;
+    openSetMenu();
+    if (opts.historyMode) setHistory("favorites", opts.historyMode);
+  }
+
+  window.addEventListener("popstate", (e) => {
+    const screen = e?.state?.screen || "home";
+    if (screen === "favorites") openFavoritesMenu({ historyMode: null });
+    else goHome({ historyMode: null });
+  });
+
   function uniq(arr) { return Array.from(new Set(arr)); }
   function sortNatural(a, b) { return String(a).localeCompare(String(b), "ru", { numeric: true, sensitivity: "base" }); }
   function escapeHtml(s) {
@@ -324,13 +358,17 @@
     dictsList.querySelectorAll("button[data-dict]").forEach(btn => {
       btn.addEventListener("click", () => {
         currentDict = btn.getAttribute("data-dict");
+        if (currentDict === "__fav__") {
+          openFavoritesMenu({ historyMode: "push" });
+          return;
+        }
         renderSections(currentDict);
         showView(viewSections);
       });
     });
     counter.textContent = "—";
     modeEl.textContent = "—";
-    showView(viewDicts);
+    goHome({ historyMode: "replace" });
   }
 
   function renderSections(dict) {
@@ -383,6 +421,9 @@
     setMenuTitle.textContent = (currentDict === "__fav__") ? "⭐ Избранное" : `${dictTitle(currentDict)} • ${sectionTitle(currentSection)} • Сет ${currentSet}`;
     setMenuInfo.textContent = `Слов в сете: ${all.length} • В сессии: ${active.length}`;
 
+    // UX: если это "Избранное", кнопка назад должна вести на главный экран
+    btnBackToSets2.textContent = (currentDict === "__fav__") ? "← На главный" : "← К сетам";
+
     setSearchInput.value = "";
     renderSetWordsList();
     showView(viewSetMenu);
@@ -416,6 +457,14 @@
         const on = toggleFav(id);
         star.classList.toggle("on", on);
         star.textContent = on ? "★" : "☆";
+
+        // В Избранном: если убрали звёздочку — слово должно сразу исчезнуть из списка
+        if (currentDict === "__fav__" && !on) {
+          renderSetWordsList();
+          const all2 = DATA.filter(w => favIds.has(w.id));
+          const active2 = all2.filter(w => !menuHidden.has(w.id));
+          setMenuInfo.textContent = `Слов в сете: ${all2.length} • В сессии: ${active2.length}`;
+        }
       });
       cb.addEventListener("change", () => {
         if (cb.checked) menuHidden.delete(id);
@@ -448,6 +497,17 @@
   });
 
   btnBackToSets2.addEventListener("click", () => {
+    if (currentDict === "__fav__") {
+      // Если мы зашли в Избранное как в отдельный экран — возвращаемся на главный одним шагом
+      try {
+        if (history.state?.screen === "favorites") {
+          history.back();
+          return;
+        }
+      } catch {}
+      goHome({ historyMode: "replace" });
+      return;
+    }
     renderSets(currentDict, currentSection);
     showView(viewSets);
   });
@@ -606,9 +666,8 @@
   let testItems = [];
   let testIndex = 0;
   let testCorrect = 0;
-  let testLocked = false;
-
-  
+  let testSelected = null;
+  let testResults = [];
   function getSelectedTestLimit() {
     const el = document.querySelector('input[name="testLimit"]:checked');
     const n = el ? Number(el.value) : 50;
@@ -696,10 +755,8 @@
   }
 
 function openGlobalTestMenu() {
-    // accordion toggle
-    btnTestScopeToggle.onclick = () => {
-      testScopeBody.classList.toggle("hidden");
-    };
+    // Scope list is always visible (no accordion)
+    if (testScopeBody) testScopeBody.classList.remove("hidden");
 
     // Build list each time (DATA may change later)
     renderTestScopeList();
@@ -710,7 +767,8 @@ function openGlobalTestMenu() {
     showView(viewGlobalTestMenu);
   }
 
-  function updateGlobalTestInfo() {
+
+function updateGlobalTestInfo() {
     const pool = getSelectedScopePool();
     const limit = getSelectedTestLimit();
 
@@ -741,8 +799,13 @@ function openGlobalTestMenu() {
 
     testIndex = 0;
     testCorrect = 0;
-    testLocked = false;
-    btnTestNext.classList.add("hidden");
+    testSelected = null;
+    testResults = [];
+
+    btnTestNext.classList.remove("hidden");
+    btnTestNext.textContent = "Дальше";
+    btnTestNext.disabled = true;
+
     showView(viewTest);
     renderTestQuestion();
   }
@@ -767,16 +830,17 @@ function openGlobalTestMenu() {
   }
 
   function renderTestQuestion() {
-    testLocked = false;
-    btnTestNext.classList.add("hidden");
+    if (testItems.length === 0) {
+      testTitle.textContent = "Тест";
+      testProgress.textContent = "Нет слов для теста.";
+      testQuestion.textContent = "Пусто 🤷‍♂️";
+      testOptions.innerHTML = "";
+      btnTestNext.classList.add("hidden");
+      return;
+    }
 
     if (testIndex >= testItems.length) {
-      testTitle.textContent = "Тест завершён ✅";
-      const pct = Math.round((testCorrect / Math.max(1, testItems.length)) * 100);
-      testProgress.textContent = `Результат: ${testCorrect}/${testItems.length} (${pct}%)`;
-      testQuestion.textContent = "Готово";
-      testOptions.innerHTML = `<button class="optionBtn" id="btnTestAgain">Пройти ещё раз</button>`;
-      document.getElementById("btnTestAgain").addEventListener("click", startTest);
+      renderTestResults();
       return;
     }
 
@@ -784,8 +848,13 @@ function openGlobalTestMenu() {
     const question = testMode === "kb" ? item.word : item.trans;
     const correctAnswer = testMode === "kb" ? item.trans : item.word;
 
+    testSelected = null;
+    btnTestNext.classList.remove("hidden");
+    btnTestNext.textContent = "Дальше";
+    btnTestNext.disabled = true;
+
     testTitle.textContent = "Тест: выбрать перевод";
-    testProgress.textContent = `Вопрос ${testIndex + 1} из ${testItems.length} • Правильно: ${testCorrect}`;
+    testProgress.textContent = `Вопрос ${testIndex + 1} из ${testItems.length}`;
     testQuestion.textContent = question;
 
     const options = pickOptions(item);
@@ -793,39 +862,93 @@ function openGlobalTestMenu() {
       <button class="optionBtn" data-opt="${escapeHtml(opt)}">${escapeHtml(opt)}</button>
     `).join("");
 
-    testOptions.querySelectorAll("button.optionBtn").forEach(btn => {
+    const buttons = Array.from(testOptions.querySelectorAll("button.optionBtn"));
+    buttons.forEach(btn => {
       btn.addEventListener("click", () => {
-        if (testLocked) return;
-        testLocked = true;
-
-        const chosen = btn.getAttribute("data-opt");
-        const buttons = Array.from(testOptions.querySelectorAll("button.optionBtn"));
-
-        buttons.forEach(b => {
-          const val = b.getAttribute("data-opt");
-          if (val === correctAnswer) b.classList.add("correct");
-        });
-
-        if (chosen === correctAnswer) {
-          testCorrect++;
-          btn.classList.add("correct");
-        } else {
-          btn.classList.add("wrong");
-        }
-
-        btnTestNext.classList.remove("hidden");
+        testSelected = btn.getAttribute("data-opt");
+        buttons.forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+        btnTestNext.disabled = !testSelected;
       });
     });
+
+    // Store current correct answer on the container for "Дальше"
+    testOptions.setAttribute("data-correct", correctAnswer);
+    testOptions.setAttribute("data-itemid", String(item.id));
+  }
+
+  function renderTestResults() {
+    const pct = Math.round((testCorrect / Math.max(1, testItems.length)) * 100);
+
+    testTitle.textContent = "Результаты теста";
+    testProgress.textContent = `Правильно: ${testCorrect}/${testItems.length} (${pct}%)`;
+    testQuestion.textContent = "";
+
+    const rows = testResults.map(r => `
+      <div class="resultItem" data-id="${r.id}">
+        <div class="resultMark ${r.isCorrect ? "ok" : "bad"}">${r.isCorrect ? "✓" : "✕"}</div>
+        <div class="resultBody">
+          <div class="resultWord">${escapeHtml(r.word)}</div>
+          <div class="resultLine"><span class="lbl">Правильно:</span> ${escapeHtml(r.correctAnswer)}</div>
+          <div class="resultLine"><span class="lbl">Твой ответ:</span> ${escapeHtml(r.userAnswer || "—")}</div>
+        </div>
+        <button class="starBtn ${isFav(r.id) ? "on" : ""}" type="button" aria-label="Избранное">${isFav(r.id) ? "★" : "☆"}</button>
+      </div>
+    `).join("");
+
+    testOptions.innerHTML = `
+      <div class="resultList">
+        ${rows || "<div class='hintText'>Нет результатов.</div>"}
+      </div>
+      <div class="row">
+        <button class="btn primary" id="btnTestAgain2">Пройти ещё раз</button>
+      </div>
+    `;
+
+    // Wire favorites
+    testOptions.querySelectorAll(".resultItem").forEach(row => {
+      const id = Number(row.getAttribute("data-id"));
+      const star = row.querySelector(".starBtn");
+      star.addEventListener("click", () => {
+        const on = toggleFav(id);
+        star.classList.toggle("on", on);
+        star.textContent = on ? "★" : "☆";
+      });
+    });
+
+    const again = document.getElementById("btnTestAgain2");
+    if (again) again.addEventListener("click", startTest);
+
+    btnTestNext.classList.add("hidden");
   }
 
   btnTestNext.addEventListener("click", () => {
+    if (testIndex >= testItems.length) return;
+    if (!testSelected) return;
+
+    const item = testItems[testIndex];
+    const correctAnswer = testMode === "kb" ? item.trans : item.word;
+    const isCorrect = testSelected === correctAnswer;
+
+    if (isCorrect) testCorrect++;
+
+    testResults.push({
+      id: item.id,
+      word: item.word,
+      trans: item.trans,
+      correctAnswer,
+      userAnswer: testSelected,
+      isCorrect,
+    });
+
     testIndex++;
     renderTestQuestion();
   });
 
   btnTestExit.addEventListener("click", () => showView(viewDicts));
 
-  // ---------- Init
+
+// ---------- Init
   (async () => {
     DATA = await loadWords();
 
