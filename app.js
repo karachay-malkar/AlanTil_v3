@@ -53,7 +53,9 @@
 
   // Global test menu
   const globalTestInfo = document.getElementById("globalTestInfo");
-  const globalDictSelect = document.getElementById("globalDictSelect");
+  const btnTestScopeToggle = document.getElementById("btnTestScopeToggle");
+  const testScopeBody = document.getElementById("testScopeBody");
+  const testScopeList = document.getElementById("testScopeList");
   const btnGlobalModeKb = document.getElementById("btnGlobalModeKb");
   const btnGlobalModeRu = document.getElementById("btnGlobalModeRu");
   const btnGlobalTestBack = document.getElementById("btnGlobalTestBack");
@@ -606,24 +608,123 @@
   let testCorrect = 0;
   let testLocked = false;
 
-  function openGlobalTestMenu() {
+  
+  function getSelectedTestLimit() {
+    const el = document.querySelector('input[name="testLimit"]:checked');
+    const n = el ? Number(el.value) : 50;
+    return (n === 30 || n === 50 || n === 100) ? n : 50;
+  }
+
+  function scopeKey(dict, section) {
+    return `${dict}||${section || ""}`;
+  }
+
+  function renderTestScopeList() {
+    // Build dict -> sections map
     const dicts = dictsFrom(DATA);
-    globalDictSelect.innerHTML = [
-      `<option value="__all__">Все словари</option>`,
-      ...dicts.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(dictTitle(d))}</option>`)
-    ].join("");
-    globalDictSelect.value = "__all__";
+    const html = dicts.map(d => {
+      const sections = uniq(DATA.filter(w => w.dict === d).map(w => w.section || "")).sort(sortNatural);
+      const sectionRows = sections.map(s => {
+        const label = s ? sectionTitle(s) : "Без раздела";
+        return `
+          <label class="scopeSectionRow">
+            <input class="scopeCheckbox scopeSection" type="checkbox" data-dict="${escapeHtml(d)}" data-section="${escapeHtml(s)}">
+            <span>${escapeHtml(label)}</span>
+          </label>
+        `;
+      }).join("");
+
+      return `
+        <div class="scopeBlock">
+          <label class="scopeDictRow">
+            <input class="scopeCheckbox scopeDict" type="checkbox" data-dict="${escapeHtml(d)}">
+            <span>${escapeHtml(dictTitle(d))}</span>
+          </label>
+          ${sectionRows}
+        </div>
+      `;
+    }).join("");
+
+    testScopeList.innerHTML = html || "<div class='hintText'>Словари не найдены.</div>";
+
+    // Wire behavior
+    const dictCbs = [...testScopeList.querySelectorAll(".scopeDict")];
+    const sectionCbs = [...testScopeList.querySelectorAll(".scopeSection")];
+
+    function updateDictState(dict) {
+      const secs = sectionCbs.filter(cb => cb.dataset.dict === dict);
+      const checked = secs.filter(cb => cb.checked).length;
+      const dictCb = dictCbs.find(cb => cb.dataset.dict === dict);
+      if (!dictCb) return;
+      dictCb.indeterminate = checked > 0 && checked < secs.length;
+      dictCb.checked = secs.length > 0 && checked === secs.length;
+    }
+
+    dictCbs.forEach(dictCb => {
+      dictCb.addEventListener("change", () => {
+        const d = dictCb.dataset.dict;
+        sectionCbs.filter(cb => cb.dataset.dict === d).forEach(cb => { cb.checked = dictCb.checked; });
+        dictCb.indeterminate = false;
+        updateGlobalTestInfo();
+      });
+    });
+
+    sectionCbs.forEach(secCb => {
+      secCb.addEventListener("change", () => {
+        updateDictState(secCb.dataset.dict);
+        updateGlobalTestInfo();
+      });
+    });
+
+    // Default: all checked (so user can quickly uncheck)
+    dictCbs.forEach(dcb => { dcb.checked = true; });
+    sectionCbs.forEach(scb => { scb.checked = true; });
+    dictCbs.forEach(dcb => { dcb.indeterminate = false; });
+
     updateGlobalTestInfo();
-    globalDictSelect.onchange = updateGlobalTestInfo;
+  }
+
+  function getSelectedScopePool() {
+    const sectionCbs = [...testScopeList.querySelectorAll(".scopeSection")];
+    if (!sectionCbs.length) return DATA;
+
+    const checked = sectionCbs.filter(cb => cb.checked);
+    if (checked.length === 0) return [];
+
+    const keys = new Set(checked.map(cb => scopeKey(cb.dataset.dict, cb.dataset.section)));
+    return DATA.filter(w => keys.has(scopeKey(w.dict, w.section || "")));
+  }
+
+function openGlobalTestMenu() {
+    // accordion toggle
+    btnTestScopeToggle.onclick = () => {
+      testScopeBody.classList.toggle("hidden");
+    };
+
+    // Build list each time (DATA may change later)
+    renderTestScopeList();
+
+    // Update info when limit changes
+    document.querySelectorAll('input[name="testLimit"]').forEach(r => (r.onchange = updateGlobalTestInfo));
 
     showView(viewGlobalTestMenu);
   }
 
   function updateGlobalTestInfo() {
-    const val = globalDictSelect.value || "__all__";
-    const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
-    const scopeName = (val === "__all__") ? "Все словари" : dictTitle(val);
-    globalTestInfo.textContent = `Источник: ${scopeName} • Слов: ${pool.length}`;
+    const pool = getSelectedScopePool();
+    const limit = getSelectedTestLimit();
+
+    // Summary counts
+    const sectionCbs = [...testScopeList.querySelectorAll(".scopeSection")];
+    const checkedSecs = sectionCbs.filter(cb => cb.checked);
+    const dictCount = new Set(checkedSecs.map(cb => cb.dataset.dict)).size;
+    const secCount = checkedSecs.length;
+
+    const scopeText = (checkedSecs.length === sectionCbs.length)
+      ? "Все словари и разделы"
+      : `Выбрано: словарей ${dictCount}, разделов ${secCount}`;
+
+    globalTestInfo.textContent = `Источник: ${scopeText} • Слов: ${pool.length} • Тест: ${Math.min(limit, pool.length)} слов`;
   }
 
   btnGlobalTest.addEventListener("click", openGlobalTestMenu);
@@ -632,10 +733,12 @@
   btnGlobalModeRu.addEventListener("click", () => { testMode = "ru"; startTest(); });
 
   function startTest() {
-    const val = globalDictSelect.value || "__all__";
-    const pool = (val === "__all__") ? DATA : DATA.filter(w => w.dict === val);
+    const pool = getSelectedScopePool();
+    const testLimit = getSelectedTestLimit();
 
     testItems = shuffle(pool.slice()); // include hidden always
+    if (testItems.length > testLimit) testItems = testItems.slice(0, testLimit);
+
     testIndex = 0;
     testCorrect = 0;
     testLocked = false;
