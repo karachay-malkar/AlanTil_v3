@@ -30,8 +30,7 @@
   const setMenuInfo = document.getElementById("setMenuInfo");
   const btnModeKb = document.getElementById("btnModeKb");
   const btnModeRu = document.getElementById("btnModeRu");
-  const setSearchInput = document.getElementById("setSearchInput");
-  const btnSetShowAll = document.getElementById("btnSetShowAll");
+    const btnSetShowAll = document.getElementById("btnSetShowAll");
   const btnSetHideAll = document.getElementById("btnSetHideAll");
   const setWordsList = document.getElementById("setWordsList");
   const btnBackToSets2 = document.getElementById("btnBackToSets2");
@@ -49,6 +48,7 @@
 
   // Top meta
   const counter = document.getElementById("counter");
+  const btnBackArrow = document.getElementById("btnBackArrow");
   const modeEl = document.getElementById("mode");
 
   // Global test menu
@@ -213,6 +213,53 @@
     which.classList.remove("hidden");
   }
 
+  // ---------- Global back navigation (single arrow in header)
+  let currentView = viewDicts;
+  const navStack = [];
+
+  function isHomeView(v){ return v === viewDicts; }
+  function isTestFlowView(v){ return v === viewGlobalTestMenu || v === viewTest; }
+
+  function updateBackArrow() {
+    if (!btnBackArrow) return;
+    const inFav = (currentDict === "__fav__") || (history?.state?.screen === "favorites");
+    const shouldShow = !isHomeView(currentView) && (navStack.length > 0 || inFav || isTestFlowView(currentView) || currentView === viewStudy || currentView === viewSetMenu || currentView === viewSets || currentView === viewSections);
+    btnBackArrow.classList.toggle("hidden", !shouldShow);
+  }
+
+  function goView(nextView, opts = {}) {
+    const { push = true, resetStack = false } = opts;
+    if (resetStack) navStack.length = 0;
+    if (push && currentView && currentView !== nextView) navStack.push(currentView);
+    showView(nextView);
+    currentView = nextView;
+    updateBackArrow();
+  }
+
+  function navigateBack() {
+    const inFav = (currentDict === "__fav__") || (history?.state?.screen === "favorites");
+    if (inFav || isTestFlowView(currentView)) {
+      navStack.length = 0;
+      goHome({ historyMode: "replace" });
+      currentView = viewDicts;
+      updateBackArrow();
+      return;
+    }
+
+    const prev = navStack.pop();
+    if (!prev) {
+      goHome({ historyMode: "replace" });
+      currentView = viewDicts;
+      updateBackArrow();
+      return;
+    }
+    showView(prev);
+    currentView = prev;
+    updateBackArrow();
+  }
+
+  if (btnBackArrow) btnBackArrow.addEventListener("click", navigateBack);
+
   // ---------- Simple navigation history (so "Назад" from Избранного ведет на главный)
   function setHistory(screen, mode /* 'push' | 'replace' */) {
     try {
@@ -224,7 +271,7 @@
 
   function goHome(opts = {}) {
     // opts.historyMode: 'push' | 'replace' | null
-    showView(viewDicts);
+    goView(viewDicts, { push:false, resetStack:true });
     currentDict = "";
     currentSection = "";
     currentSet = 1;
@@ -250,6 +297,74 @@
   function sortNatural(a, b) { return String(a).localeCompare(String(b), "ru", { numeric: true, sensitivity: "base" }); }
   function escapeHtml(s) {
     return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  // ---------- Study renderers (v7.3)
+  // Split text into groups by semicolon or newline
+  function splitGroups(text){
+    return String(text||"")
+      .split(/\s*[;；]\s*|\n+/g)
+      .map(s=>s.trim())
+      .filter(Boolean);
+  }
+
+  // Render translation groups as pills (group-level)
+  function renderTransGroups(el, text){
+    const groups = splitGroups(text);
+    if(!groups.length){ el.textContent = ""; return; }
+
+    const showNums = groups.length > 1;
+    el.innerHTML = `
+      <div class="groups">
+        ${groups.map((g,i)=>`
+          <div class="groupRow">
+            ${showNums ? `<span class="groupNum">${i+1}</span>` : ``}
+            <div class="groupPill">${escapeHtml(g)}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  // Render example groups by numeric markers (1,2,3...)
+  function renderExampleGroups(el, text){
+    const raw = String(text||"").trim();
+    if(!raw){ el.textContent = ""; return; }
+
+    // Detect numeric groups at line start
+    const lines = raw.split(/\n+/);
+    let groups = [];
+    let current = null;
+
+    for(const line of lines){
+      const m = line.match(/^\s*(\d+)\s+(.*)$/);
+      if(m){
+        if(current) groups.push(current);
+        current = { num: m[1], lines: [m[2]] };
+      }else{
+        if(!current){
+          current = { num: null, lines: [line] };
+        }else{
+          current.lines.push(line);
+        }
+      }
+    }
+    if(current) groups.push(current);
+
+    const showNums = groups.length > 1 && groups.every(g=>g.num);
+
+    el.innerHTML = `
+      <div class="groups examples">
+        ${groups.map((g,i)=>`
+          <div class="groupRow">
+            ${showNums ? `<span class="groupNum">${escapeHtml(g.num)}</span>` : ``}
+            <div class="groupExample">
+              ${g.lines.map(l=>`<div class="exLine">${escapeHtml(l)}</div>`).join("")}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
   // Split "a, b; c, d" into blocks and pills
@@ -363,7 +478,7 @@
           return;
         }
         renderSections(currentDict);
-        showView(viewSections);
+        goView(viewSections);
       });
     });
     counter.textContent = "—";
@@ -379,7 +494,7 @@
       btn.addEventListener("click", () => {
         currentSection = btn.getAttribute("data-section");
         renderSets(currentDict, currentSection);
-        showView(viewSets);
+        goView(viewSets);
       });
     });
   }
@@ -407,8 +522,8 @@
     });
   }
 
-  btnBackToDicts.addEventListener("click", () => showView(viewDicts));
-  btnBackToSections.addEventListener("click", () => showView(viewSections));
+  btnBackToDicts.addEventListener("click", () => goView(viewDicts));
+  btnBackToSections.addEventListener("click", () => goView(viewSections));
 
   // ---------- Set menu / hiding words
   let menuHidden = new Set();
@@ -424,15 +539,13 @@
     // UX: если это "Избранное", кнопка назад должна вести на главный экран
     btnBackToSets2.textContent = (currentDict === "__fav__") ? "← На главный" : "← К сетам";
 
-    setSearchInput.value = "";
     renderSetWordsList();
-    showView(viewSetMenu);
+    goView(viewSetMenu);
   }
 
   function renderSetWordsList() {
-    const q = (setSearchInput.value || "").trim().toLowerCase();
     const all = (currentDict === "__fav__") ? DATA.filter(w => favIds.has(w.id)) : wordsForSet(DATA, currentDict, currentSection, currentSet);
-    const filtered = q ? all.filter(w => (w.word + " " + w.trans).toLowerCase().includes(q)) : all;
+    const filtered = all;
 
     setWordsList.innerHTML = filtered.map(w => {
       const checked = !menuHidden.has(w.id);
@@ -478,8 +591,6 @@
     });
   }
 
-  setSearchInput.addEventListener("input", renderSetWordsList);
-
   btnSetShowAll.addEventListener("click", () => {
     menuHidden = new Set();
     setHiddenSet(currentDict, currentSection, currentSet, menuHidden);
@@ -509,7 +620,7 @@
       return;
     }
     renderSets(currentDict, currentSection);
-    showView(viewSets);
+    goView(viewSets);
   });
 
   btnModeKb.addEventListener("click", () => { currentStudyMode = "kb"; startStudySession(); });
@@ -528,7 +639,7 @@
 
     transEl.classList.add("hidden");
     exampleBox.classList.add("hidden");
-    showView(viewStudy);
+    goView(viewStudy);
     renderStudyCard();
   }
 
@@ -574,8 +685,10 @@
     const front = currentStudyMode === "kb" ? item.word : item.trans;
     const back = currentStudyMode === "kb" ? item.trans : item.word;
 
-    setRichOrText(wordEl, front);
-    setRichOrText(transEl, back);
+    // Front stays simple text
+    wordEl.textContent = front;
+    // Back: render translation groups
+    renderTransGroups(transEl, back);
 
     const done = totalPlanned - q.length - (round === "repeat" ? 0 : 0);
     counter.textContent = `${Math.max(0, totalPlanned - (mainQueue.length + (round === "repeat" ? repeatQueue.length : 0)))}/${totalPlanned}`;
@@ -597,7 +710,7 @@
     if (!ex) {
       exampleBox.textContent = "Пример пока не добавлен.";
     } else {
-      setRichOrText(exampleBox, ex);
+      renderExampleGroups(exampleBox, ex);
     }
     exampleBox.classList.toggle("hidden");
   });
@@ -764,7 +877,7 @@ function openGlobalTestMenu() {
     // Update info when limit changes
     document.querySelectorAll('input[name="testLimit"]').forEach(r => (r.onchange = updateGlobalTestInfo));
 
-    showView(viewGlobalTestMenu);
+    goView(viewGlobalTestMenu);
   }
 
 
@@ -786,7 +899,6 @@ function updateGlobalTestInfo() {
   }
 
   btnGlobalTest.addEventListener("click", openGlobalTestMenu);
-  btnGlobalTestBack.addEventListener("click", () => showView(viewDicts));
   btnGlobalModeKb.addEventListener("click", () => { testMode = "kb"; startTest(); });
   btnGlobalModeRu.addEventListener("click", () => { testMode = "ru"; startTest(); });
 
@@ -806,7 +918,7 @@ function updateGlobalTestInfo() {
     btnTestNext.textContent = "Дальше";
     btnTestNext.disabled = true;
 
-    showView(viewTest);
+    goView(viewTest);
     renderTestQuestion();
   }
 
@@ -945,7 +1057,6 @@ function updateGlobalTestInfo() {
     renderTestQuestion();
   });
 
-  btnTestExit.addEventListener("click", () => showView(viewDicts));
 
 
 // ---------- Init
@@ -954,7 +1065,7 @@ function updateGlobalTestInfo() {
 
     if (!Array.isArray(DATA) || !DATA.length) {
       dictsList.innerHTML = "<div class='smallNote'>Нет данных. Проверь таблицу и заголовки: id, dict, section, set, word, trans, example</div>";
-      showView(viewDicts);
+      goView(viewDicts);
       return;
     }
 
