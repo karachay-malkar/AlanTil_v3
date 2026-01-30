@@ -471,7 +471,6 @@
     // UX: если это "Избранное", кнопка назад должна вести на главный экран
     btnBackToSets2.textContent = (currentDict === "__fav__") ? "← На главный" : "← К сетам";
 
-    setSearchInput.value = "";
     renderSetWordsList();
     goView(viewSetMenu);
   }
