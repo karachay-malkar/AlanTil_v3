@@ -432,3 +432,76 @@ input{
 @media (max-width: 380px){
   .word{ font-size: 34px; }
 }
+
+/* --- Global header back arrow --- */
+.backArrow{
+  appearance:none;
+  border:0;
+  background:transparent;
+  padding:6px 8px;
+  margin-top:6px;
+  border-radius:12px;
+  color:var(--accent);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
+.backArrow svg{width:22px;height:22px;fill:currentColor;}
+.backArrow:active{transform:translateX(-2px); opacity:.85;}
+.backArrow.hidden{display:none !important;}
+
+/* Old per-screen back buttons are removed from UI (kept in DOM for compatibility) */
+button[data-legacy-back="1"]{display:none !important;}
+
+
+.top{ align-items:flex-start; }
+.titleWrap{ display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+
+/* --- Multi-translation pills (study + examples) --- */
+.multi{ margin-top: 2px; }
+.multiRow{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 8px;
+}
+.multiNum{
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 950;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid rgba(15,23,42,0.10);
+  background: rgba(17,169,232,0.06);
+  margin-top: 2px;
+}
+.multiPills{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.pill{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(17,169,232,0.20);
+  background: rgba(17,169,232,0.06);
+  font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
