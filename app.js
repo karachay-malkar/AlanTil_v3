@@ -30,8 +30,7 @@
   const setMenuInfo = document.getElementById("setMenuInfo");
   const btnModeKb = document.getElementById("btnModeKb");
   const btnModeRu = document.getElementById("btnModeRu");
-  const setSearchInput = document.getElementById("setSearchInput");
-  const btnSetShowAll = document.getElementById("btnSetShowAll");
+    const btnSetShowAll = document.getElementById("btnSetShowAll");
   const btnSetHideAll = document.getElementById("btnSetHideAll");
   const setWordsList = document.getElementById("setWordsList");
   const btnBackToSets2 = document.getElementById("btnBackToSets2");
@@ -49,6 +48,7 @@
 
   // Top meta
   const counter = document.getElementById("counter");
+  const btnBackArrow = document.getElementById("btnBackArrow");
   const modeEl = document.getElementById("mode");
 
   // Global test menu
@@ -213,6 +213,53 @@
     which.classList.remove("hidden");
   }
 
+  // ---------- Global back navigation (single arrow in header)
+  let currentView = viewDicts;
+  const navStack = [];
+
+  function isHomeView(v){ return v === viewDicts; }
+  function isTestFlowView(v){ return v === viewGlobalTestMenu || v === viewTest; }
+
+  function updateBackArrow() {
+    if (!btnBackArrow) return;
+    const inFav = (currentDict === "__fav__") || (history?.state?.screen === "favorites");
+    const shouldShow = !isHomeView(currentView) && (navStack.length > 0 || inFav || isTestFlowView(currentView) || currentView === viewStudy || currentView === viewSetMenu || currentView === viewSets || currentView === viewSections);
+    btnBackArrow.classList.toggle("hidden", !shouldShow);
+  }
+
+  function goView(nextView, opts = {}) {
+    const { push = true, resetStack = false } = opts;
+    if (resetStack) navStack.length = 0;
+    if (push && currentView && currentView !== nextView) navStack.push(currentView);
+    showView(nextView);
+    currentView = nextView;
+    updateBackArrow();
+  }
+
+  function navigateBack() {
+    const inFav = (currentDict === "__fav__") || (history?.state?.screen === "favorites");
+    if (inFav || isTestFlowView(currentView)) {
+      navStack.length = 0;
+      goHome({ historyMode: "replace" });
+      currentView = viewDicts;
+      updateBackArrow();
+      return;
+    }
+
+    const prev = navStack.pop();
+    if (!prev) {
+      goHome({ historyMode: "replace" });
+      currentView = viewDicts;
+      updateBackArrow();
+      return;
+    }
+    showView(prev);
+    currentView = prev;
+    updateBackArrow();
+  }
+
+  if (btnBackArrow) btnBackArrow.addEventListener("click", navigateBack);
+
   // ---------- Simple navigation history (so "Назад" from Избранного ведет на главный)
   function setHistory(screen, mode /* 'push' | 'replace' */) {
     try {
@@ -224,7 +271,7 @@
 
   function goHome(opts = {}) {
     // opts.historyMode: 'push' | 'replace' | null
-    showView(viewDicts);
+    goView(viewDicts, { push:false, resetStack:true });
     currentDict = "";
     currentSection = "";
     currentSet = 1;
@@ -363,7 +410,7 @@
           return;
         }
         renderSections(currentDict);
-        showView(viewSections);
+        goView(viewSections);
       });
     });
     counter.textContent = "—";
@@ -379,7 +426,7 @@
       btn.addEventListener("click", () => {
         currentSection = btn.getAttribute("data-section");
         renderSets(currentDict, currentSection);
-        showView(viewSets);
+        goView(viewSets);
       });
     });
   }
@@ -407,8 +454,8 @@
     });
   }
 
-  btnBackToDicts.addEventListener("click", () => showView(viewDicts));
-  btnBackToSections.addEventListener("click", () => showView(viewSections));
+  btnBackToDicts.addEventListener("click", () => goView(viewDicts));
+  btnBackToSections.addEventListener("click", () => goView(viewSections));
 
   // ---------- Set menu / hiding words
   let menuHidden = new Set();
@@ -426,13 +473,12 @@
 
     setSearchInput.value = "";
     renderSetWordsList();
-    showView(viewSetMenu);
+    goView(viewSetMenu);
   }
 
   function renderSetWordsList() {
-    const q = (setSearchInput.value || "").trim().toLowerCase();
     const all = (currentDict === "__fav__") ? DATA.filter(w => favIds.has(w.id)) : wordsForSet(DATA, currentDict, currentSection, currentSet);
-    const filtered = q ? all.filter(w => (w.word + " " + w.trans).toLowerCase().includes(q)) : all;
+    const filtered = all;
 
     setWordsList.innerHTML = filtered.map(w => {
       const checked = !menuHidden.has(w.id);
@@ -478,8 +524,6 @@
     });
   }
 
-  setSearchInput.addEventListener("input", renderSetWordsList);
-
   btnSetShowAll.addEventListener("click", () => {
     menuHidden = new Set();
     setHiddenSet(currentDict, currentSection, currentSet, menuHidden);
@@ -509,7 +553,7 @@
       return;
     }
     renderSets(currentDict, currentSection);
-    showView(viewSets);
+    goView(viewSets);
   });
 
   btnModeKb.addEventListener("click", () => { currentStudyMode = "kb"; startStudySession(); });
@@ -528,7 +572,7 @@
 
     transEl.classList.add("hidden");
     exampleBox.classList.add("hidden");
-    showView(viewStudy);
+    goView(viewStudy);
     renderStudyCard();
   }
 
@@ -764,7 +808,7 @@ function openGlobalTestMenu() {
     // Update info when limit changes
     document.querySelectorAll('input[name="testLimit"]').forEach(r => (r.onchange = updateGlobalTestInfo));
 
-    showView(viewGlobalTestMenu);
+    goView(viewGlobalTestMenu);
   }
 
 
@@ -786,7 +830,6 @@ function updateGlobalTestInfo() {
   }
 
   btnGlobalTest.addEventListener("click", openGlobalTestMenu);
-  btnGlobalTestBack.addEventListener("click", () => showView(viewDicts));
   btnGlobalModeKb.addEventListener("click", () => { testMode = "kb"; startTest(); });
   btnGlobalModeRu.addEventListener("click", () => { testMode = "ru"; startTest(); });
 
@@ -806,7 +849,7 @@ function updateGlobalTestInfo() {
     btnTestNext.textContent = "Дальше";
     btnTestNext.disabled = true;
 
-    showView(viewTest);
+    goView(viewTest);
     renderTestQuestion();
   }
 
@@ -945,7 +988,6 @@ function updateGlobalTestInfo() {
     renderTestQuestion();
   });
 
-  btnTestExit.addEventListener("click", () => showView(viewDicts));
 
 
 // ---------- Init
@@ -954,7 +996,7 @@ function updateGlobalTestInfo() {
 
     if (!Array.isArray(DATA) || !DATA.length) {
       dictsList.innerHTML = "<div class='smallNote'>Нет данных. Проверь таблицу и заголовки: id, dict, section, set, word, trans, example</div>";
-      showView(viewDicts);
+      goView(viewDicts);
       return;
     }
 
