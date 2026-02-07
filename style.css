@@ -456,6 +456,7 @@ input{
   -webkit-tap-highlight-color: transparent;
   grid-column: 1;
   justify-self: start;
+  align-self: start;
 }
 
 .backArrow svg{width:22px;height:22px;fill:currentColor;}
@@ -576,7 +577,7 @@ button[data-legacy-back="1"]{display:none !important;}
   gap:8px;
   grid-column: 3;
   justify-self: end;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
 .brandIcon{
