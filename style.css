@@ -52,7 +52,7 @@ body{
 .view{ padding-top: 2px; }
 
 .panel{
-  margin-top: 12px;
+  margin-top: 6px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--r);
