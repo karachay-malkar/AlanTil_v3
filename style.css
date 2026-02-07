@@ -446,8 +446,7 @@ input{
   padding:0;
   margin:0;
   border-radius:12px;
-  transform: translateY(10px)
-
+  
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -583,6 +582,8 @@ button[data-legacy-back="1"]{display:none !important;}
   grid-column: 3;
   justify-self: end;
   margin-top: 0;
+  transform: translateY(10px)
+
 }
 
 .brandIcon{
