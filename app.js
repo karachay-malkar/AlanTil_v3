@@ -891,7 +891,10 @@ function updateBackArrow() {
     else if (dx < -threshold) swipeDecision(false);
   });
 
-  btnBackToSetMenu.addEventListener("click", openSetMenu);
+  btnBackToSetMenu.addEventListener("click", () => {
+  favIds = loadFavSet();
+  openSetMenu();
+});
 
   // Favorites toggle on study card
   btnFav.addEventListener("click", (e) => {
