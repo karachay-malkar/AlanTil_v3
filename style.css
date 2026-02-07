@@ -36,13 +36,14 @@ body{
   color: var(--brand-dark);
 }
 .meta{
-  font-size: 13px;
+  font-size: 16px;
   color: var(--text-secondary);
   display:flex;
   gap: 10px;
   grid-column: 2;
   justify-self: center;
   text-align: center;
+  outline: 2px solid red;
 }
 
 
@@ -575,7 +576,7 @@ button[data-legacy-back="1"]{display:none !important;}
   gap:8px;
   grid-column: 3;
   justify-self: end;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .brandIcon{
