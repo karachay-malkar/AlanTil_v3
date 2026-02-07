@@ -64,6 +64,11 @@ body{
   padding: 12px;
   box-shadow: var(--shadow);
 }
+
+#viewDicts .panel{
+  margin-top: 6px;
+}
+
 .panelTitle{
   font-weight: 950;
   font-size: 18px;
@@ -582,7 +587,7 @@ button[data-legacy-back="1"]{display:none !important;}
   grid-column: 3;
   justify-self: end;
   margin-top: 0;
-  transform: translateY(10px)
+  transform: translateY(18px)
 
 }
 
