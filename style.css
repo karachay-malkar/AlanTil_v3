@@ -45,7 +45,7 @@ body{
 
 /* ---------- LAYOUT ---------- */
 .wrap{
-  padding: 14px;
+  padding: 4px;
   max-width: 720px;
   margin: 0 auto;
   min-height: calc(100vh - 56px);
