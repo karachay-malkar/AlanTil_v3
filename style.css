@@ -24,7 +24,7 @@ body{
 
 /* ---------- TOP ---------- */
 .top{
-  padding: 14px 16px;
+  padding: 6px 16px;
   display:flex;
   align-items: baseline;
   justify-content: space-between;
@@ -45,7 +45,7 @@ body{
 
 /* ---------- LAYOUT ---------- */
 .wrap{
-  padding: 2px
+  padding: 8px
   max-width: 720px;
   margin: 0 auto;
   min-height: calc(100vh - 56px);
