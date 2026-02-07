@@ -50,7 +50,7 @@ body{
   margin: 0 auto;
   min-height: calc(100vh - 56px);
 }
-.view{ padding-top: 6px; }
+.view{ padding-top: 2px; }
 
 .panel{
   margin-top: 12px;
