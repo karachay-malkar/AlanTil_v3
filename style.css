@@ -44,7 +44,7 @@ body{
   justify-self: center;
   text-align: center;
   line-height: 1;
-  transform: translateY(4px, -6px);
+  transform: translateY(8px, -8px);
 }
 
 
@@ -448,7 +448,7 @@ input{
   padding:0;
   margin:0;
   border-radius:12px;
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   
   display:inline-flex;
   align-items:center;
