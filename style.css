@@ -24,7 +24,7 @@ body{
 
 /* ---------- TOP ---------- */
 .top{
-  padding: 6px 16px;
+  padding: 2px 16px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -442,7 +442,7 @@ input{
   border:0;
   background:transparent;
   padding:2px 8px;
-  margin-top:0px;
+  margin-top:6px;
   border-radius:12px;
   color:var(--accent);
   display:inline-flex;
@@ -575,6 +575,7 @@ button[data-legacy-back="1"]{display:none !important;}
   gap:8px;
   grid-column: 3;
   justify-self: end;
+  margin-top: 6px;
 }
 
 .brandIcon{
