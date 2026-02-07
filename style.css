@@ -45,19 +45,19 @@ body{
 
 /* ---------- LAYOUT ---------- */
 .wrap{
-  padding: 8px
+  padding: 6px;
   max-width: 720px;
   margin: 0 auto;
   min-height: calc(100vh - 56px);
 }
-.view{ padding-top: 0px; }
+.view{ padding-top: 6px; }
 
 .panel{
   margin-top: 0px;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 16px;
+  padding: 12px;
   box-shadow: var(--shadow);
 }
 .panelTitle{
