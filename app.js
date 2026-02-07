@@ -606,7 +606,7 @@ function updateBackArrow() {
   }
 
   function renderSections(dict) {
-    sectionsTitle.textContent = (dict === "__fav__") ? "Избранное" : `Разделы: ${dictTitle(dict)}`;
+    sectionsTitle.textContent = (dict === "__fav__") ? "Избранное" : dictTitle(dict);
     const sections = (dict === "__fav__") ? ["Избранное"] : sectionsFrom(DATA, dict);
     sectionsList.innerHTML = sections.map(s => `<button class="btn" data-section="${escapeHtml(s)}">${escapeHtml(sectionTitle(s))}</button>`).join("");
     sectionsList.querySelectorAll("button[data-section]").forEach(btn => {
@@ -619,7 +619,7 @@ function updateBackArrow() {
   }
 
   function renderSets(dict, section) {
-    setsTitle.textContent = (dict === "__fav__") ? "Избранное" : `Сеты: ${sectionTitle(section)}`;
+    setsTitle.textContent = (dict === "__fav__") ? "Избранное" : sectionTitle(section);
     const sets = (dict === "__fav__") ? [1] : setsFrom(DATA, dict, section);
     setsList.innerHTML = sets.map(s => {
       const all = (dict === "__fav__") ? DATA.filter(w => favIds.has(w.id)) : wordsForSet(DATA, dict, section, s);
