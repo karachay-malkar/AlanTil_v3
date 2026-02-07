@@ -439,7 +439,7 @@ input{
   border:0;
   background:transparent;
   padding:6px 8px;
-  margin-top:6px;
+  margin-top:0px;
   border-radius:12px;
   color:var(--accent);
   display:inline-flex;
@@ -564,6 +564,7 @@ button[data-legacy-back="1"]{display:none !important;}
   display:flex;
   align-items:center;
   gap:8px;
+  margin-left: auto;
 }
 .brandIcon{
   width:48px;
