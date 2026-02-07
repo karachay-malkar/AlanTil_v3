@@ -456,7 +456,7 @@ input{
   -webkit-tap-highlight-color: transparent;
   grid-column: 1;
   justify-self: start;
-  align-self: start;
+  outline: 2px solid red;
 }
 
 .backArrow svg{width:22px;height:22px;fill:currentColor;}
