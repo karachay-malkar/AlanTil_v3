@@ -170,12 +170,6 @@ input{
   margin-top: 8px;
   text-align:center;
 }
-.trans{
-  font-size: 16px;
-  color: var(--text-secondary);
-  margin-top: 12px;
-  text-align:center;
-}
 
 .example{
   margin-top: 12px;
@@ -561,19 +555,6 @@ button[data-legacy-back="1"]{display:none !important;}
   text-align: left;
 }
 
-/* Example pill (group) */
-.groupExample{
-  flex: 1 1 auto;
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px dashed rgba(17,169,232,0.35);
-  background: rgba(17,169,232,0.04);
-  line-height: 1.4;
-  text-align: left;
-}
-.exLine{ margin-top: 8px; }
-.exLine:first-child{ margin-top: 0; }
 
 /* Remove legacy multi-pill centered layout from study rendering (kept for other views) */
 .trans{ text-align: left; }
@@ -710,4 +691,25 @@ button[data-legacy-back="1"]{display:none !important;}
 
 #viewDicts .panel{
   margin-top: 22px;
+}
+
+
+
+/* v8.6 — карточки: типографика как в списках сетов */
+
+/* Перевод (главный текст) */
+.groupPill .gTrans{
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+/* Примеры */
+.groupPill .gEx{
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  margin-top: 6px;
 }
