@@ -39,8 +39,7 @@
   const card = document.getElementById("card");
   const wordEl = document.getElementById("word");
   const transEl = document.getElementById("trans");
-  const btnExample = document.getElementById("btnExample");
-  const btnFav = document.getElementById("btnFav");
+const btnFav = document.getElementById("btnFav");
   const exampleBox = document.getElementById("exampleBox");
   const btnYes = document.getElementById("btnYes");
   const btnNo = document.getElementById("btnNo");
@@ -938,12 +937,9 @@ function updateBackArrow() {
       transEl.textContent = "В этом сете все слова скрыты. Верни их в меню сета.";
       transEl.classList.remove("hidden");
       btnFav.classList.add("hidden");
-      btnExample.classList.add("hidden");
-      
-      return;
+return;
     } else {
-      btnExample.classList.remove("hidden");
-    }
+}
 
     if (q.length === 0) {
       wordEl.textContent = "Готово ✅";
@@ -951,9 +947,7 @@ function updateBackArrow() {
       transEl.classList.remove("hidden");
       exampleBox.classList.add("hidden");
       btnFav.classList.add("hidden");
-      btnExample.classList.add("hidden");
-      
-      return;
+return;
     }
 
     const item = q[0];
@@ -987,17 +981,10 @@ function updateBackArrow() {
   // Tap: flip (show/hide translation)
   card.addEventListener("click", (e) => {
     // don't treat clicking example button as flip
-    if (e.target && (e.target.id === "btnExample" || e.target.id === "btnFav")) return;
+    if (e.target && (e.target.id === "btnFav")) return;
     transEl.classList.toggle("hidden");
   });
-
-  // Example button
-  btnExample.addEventListener("click", () => {
-    // examples are now shown together with translation groups
-    transEl.classList.remove("hidden");
-  });
-
-  function swipeDecision(known) {
+function swipeDecision(known) {
     setRoundIfNeeded();
     const q = currentQueue();
     if (!q.length) return;
