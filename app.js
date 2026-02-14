@@ -1016,18 +1016,28 @@ function swipeDecision(known) {
     isAnimating = true;
 
     card.style.pointerEvents = "none";
-    card.style.transition = "transform .5s ease, opacity .5s ease, box-shadow .5s ease";
+    card.style.transition = "transform .18s ease, opacity .18s ease";
     card.style.transform = `translateX(${dir*520}px) rotate(${dir*14}deg)`;
     card.style.opacity = "0";
 
     setTimeout(()=>{
       swipeDecision(known);
+
+      // Appear from top (v9.2)
+      card.style.transition = "none";
+      card.style.transform = "translateY(-60px)";
+      card.style.opacity = "0";
+
+      requestAnimationFrame(() => {
+        card.style.transition = "transform .4s ease, opacity .4s ease";
+        card.style.transform = "translateY(0)";
+        card.style.opacity = "1";
+      });
       card.style.transform = "";
       card.style.opacity = "";
-      card.style.boxShadow = "";
       card.style.pointerEvents = "";
       isAnimating = false;
-    }, 500);
+    }, 400);
   }
 
   // Swipe gestures (animated)
@@ -1039,59 +1049,39 @@ function swipeDecision(known) {
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     card.style.transition = "none";
-    card.style.boxShadow = "";
   }, { passive: true });
 
   card.addEventListener("touchmove", (e) => {
-  if (!dragging || !e.touches?.[0] || isAnimating) return;
+    if (!dragging || !e.touches?.[0] || isAnimating) return;
 
-  const dx = e.touches[0].clientX - startX;
-  const dy = e.touches[0].clientY - startY;
-  if (Math.abs(dy) > Math.abs(dx)) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    if (Math.abs(dy) > Math.abs(dx)) return;
 
-  // Quizlet-like threshold (30% of screen width)
-  const threshold = card.offsetWidth * 0.3;
-  const progress = Math.min(Math.abs(dx) / threshold, 1);
+    const rotate = dx / 20;
+    const opacity = 1 - Math.abs(dx) / 300;
 
-  const rotate = dx / 22;
-  const opacity = 1 - Math.min(Math.abs(dx) / (threshold * 1.6), 0.6);
-
-  card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
-  card.style.opacity = String(opacity);
-
-  // Edge glow feedback
-  if (dx > 0) {
-    // right edge green
-    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), 28px 0 100px rgba(34,197,94,${1 * progress})`;
-  } else if (dx < 0) {
-    // left edge red
-    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), -28px 0 100px rgba(239,68,68,${1 * progress})`;
-  } else {
-    card.style.boxShadow = "";
-  }
-}, { passive: true });
+    card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
+    card.style.opacity = opacity;
+  }, { passive: true });
 
   card.addEventListener("touchend", (e) => {
-  if (!dragging || isAnimating) return;
-  dragging = false;
+    if (!dragging || isAnimating) return;
+    dragging = false;
 
-  const endX = (e.changedTouches?.[0]?.clientX ?? startX);
-  const dx = endX - startX;
+    const endX = (e.changedTouches?.[0]?.clientX ?? startX);
+    const dx = endX - startX;
+    const threshold = 70;
 
-  // Quizlet-like threshold (30% of screen width)
-  const threshold = card.offsetWidth * 0.3;
+    card.style.transition = "transform .18s ease, opacity .18s ease";
 
-  card.style.transition = "transform .18s ease, opacity .18s ease, box-shadow .18s ease";
-
-  if (dx > threshold) animateSwipe(1, true);
-  else if (dx < -threshold) animateSwipe(-1, false);
-  else {
-    // snap back
-    card.style.transform = "";
-    card.style.opacity = "";
-    card.style.boxShadow = "";
-  }
-});
+    if (dx > threshold) animateSwipe(1, true);
+    else if (dx < -threshold) animateSwipe(-1, false);
+    else {
+      card.style.transform = "";
+      card.style.opacity = "";
+    }
+  });
 
   btnBackToSetMenu.addEventListener("click", () => {
   favIds = loadFavSet();
