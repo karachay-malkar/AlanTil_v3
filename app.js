@@ -5,6 +5,7 @@
   // Views
   const viewDicts = document.getElementById("viewDicts");
   const viewSections = document.getElementById("viewSections");
+  const viewLearnMenu = document.getElementById("viewLearnMenu");
   const viewSets = document.getElementById("viewSets");
   const viewSetMenu = document.getElementById("viewSetMenu");
   const viewGlobalTestMenu = document.getElementById("viewGlobalTestMenu");
@@ -30,8 +31,7 @@
   const setMenuInfo = document.getElementById("setMenuInfo");
   const btnModeKb = document.getElementById("btnModeKb");
   const btnModeRu = document.getElementById("btnModeRu");
-  const setSearchInput = document.getElementById("setSearchInput");
-  const btnSetShowAll = document.getElementById("btnSetShowAll");
+    const btnSetShowAll = document.getElementById("btnSetShowAll");
   const btnSetHideAll = document.getElementById("btnSetHideAll");
   const setWordsList = document.getElementById("setWordsList");
   const btnBackToSets2 = document.getElementById("btnBackToSets2");
@@ -40,8 +40,7 @@
   const card = document.getElementById("card");
   const wordEl = document.getElementById("word");
   const transEl = document.getElementById("trans");
-  const btnExample = document.getElementById("btnExample");
-  const btnFav = document.getElementById("btnFav");
+const btnFav = document.getElementById("btnFav");
   const exampleBox = document.getElementById("exampleBox");
   const btnYes = document.getElementById("btnYes");
   const btnNo = document.getElementById("btnNo");
@@ -49,6 +48,7 @@
 
   // Top meta
   const counter = document.getElementById("counter");
+  const btnBackArrow = document.getElementById("btnBackArrow");
   const modeEl = document.getElementById("mode");
 
   // Global test menu
@@ -180,7 +180,9 @@
     const wordI = idx("word");
     const transI = idx("trans");
     const exI = idx("example");
+    const posI = idx("pos");
 
+    const dictOrderI = idx("dict_order");
     if (idI === -1 || setI === -1 || wordI === -1 || transI === -1) return [];
 
     const out = [];
@@ -199,7 +201,9 @@
         set: Number(cols[setI] || 0),
         word: String(cols[wordI] || "").trim(),
         trans: String(cols[transI] || "").trim(),
+        pos: posI !== -1 ? String(cols[posI] || "").trim() : "",
         example: exI !== -1 ? String(cols[exI] || "").trim() : "",
+        dict_order: dictOrderI !== -1 ? Number(cols[dictOrderI] || 0) : 0,
       };
       if (!obj.id || !obj.set || !obj.word || !obj.trans) continue;
       out.push(obj);
@@ -208,10 +212,90 @@
   }
 
   // ---------- Helpers
+
+  // ---------- RU title renderer (v8.6, stage 2)
+  function renderRuTitle(el, text){
+    const groups = splitGroups(text);
+    if (!groups.length){
+      el.textContent = "";
+      return;
+    }
+    if (groups.length === 1){
+      el.textContent = groups[0];
+      return;
+    }
+    el.innerHTML = groups.map((g,i)=>`<div>${i+1}. ${escapeHtml(g)}</div>`).join("");
+  }
   function showView(which) {
-    [viewDicts, viewSections, viewSets, viewSetMenu, viewGlobalTestMenu, viewTest, viewStudy].forEach(v => v.classList.add("hidden"));
+    [viewDicts, viewLearnMenu, viewSections, viewSets, viewSetMenu, viewGlobalTestMenu, viewTest, viewStudy, viewDictContent].forEach(v => v.classList.add("hidden"));
     which.classList.remove("hidden");
   }
+  // --- Dictionary content visibility helper
+  function hideDictContent(){
+    if (viewDictContent) viewDictContent.classList.add("hidden");
+  }
+
+
+  // ---------- Global back navigation (single arrow in header)
+  let currentView = viewDicts;
+  const navStack = [];
+
+  function isHomeView(v){ return v === viewDicts; }
+  function isTestFlowView(v){ return v === viewGlobalTestMenu || v === viewTest; }
+
+  function updateMetaVisibility(){
+  if (!counter || !modeEl) return;
+  const onStudy = (currentView === viewStudy);
+  counter.style.display = onStudy ? "" : "none";
+  modeEl.style.display = "none";
+}
+
+function updateBackArrow() {
+    if (!btnBackArrow) return;
+    const inFav = (currentDict === "__fav__") || (history?.state?.screen === "favorites");
+    const shouldShow = !isHomeView(currentView) && (navStack.length > 0 || inFav || isTestFlowView(currentView) || currentView === viewStudy || currentView === viewSetMenu || currentView === viewSets || currentView === viewSections || currentView === viewLearnMenu);
+    btnBackArrow.classList.toggle("hidden", !shouldShow);
+  }
+
+  function goView(nextView, opts = {}) {
+    hideDictContent();
+    const { push = true, resetStack = false } = opts;
+    if (resetStack) navStack.length = 0;
+    if (push && currentView && currentView !== nextView) navStack.push(currentView);
+    showView(nextView);
+    currentView = nextView;
+    updateBackArrow();
+    updateMetaVisibility();
+  }
+
+  function navigateBack() {
+
+
+    const inFav = (currentDict === "__fav__") || (history?.state?.screen === "favorites");
+    if (inFav || isTestFlowView(currentView)) {
+      navStack.length = 0;
+      goHome({ historyMode: "replace" });
+      currentView = viewDicts;
+      updateBackArrow();
+    updateMetaVisibility();
+      return;
+    }
+
+    const prev = navStack.pop();
+    if (!prev) {
+      goHome({ historyMode: "replace" });
+      currentView = viewDicts;
+      updateBackArrow();
+    updateMetaVisibility();
+      return;
+    }
+    showView(prev);
+    currentView = prev;
+    updateBackArrow();
+    updateMetaVisibility();
+  }
+
+  if (btnBackArrow) btnBackArrow.addEventListener("click", navigateBack);
 
   // ---------- Simple navigation history (so "Назад" from Избранного ведет на главный)
   function setHistory(screen, mode /* 'push' | 'replace' */) {
@@ -223,8 +307,11 @@
   }
 
   function goHome(opts = {}) {
+  // RESET META
+  if (counter) counter.textContent = "";
+  if (modeEl) modeEl.textContent = "—";
     // opts.historyMode: 'push' | 'replace' | null
-    showView(viewDicts);
+    goView(viewDicts, { push:false, resetStack:true });
     currentDict = "";
     currentSection = "";
     currentSet = 1;
@@ -250,6 +337,221 @@
   function sortNatural(a, b) { return String(a).localeCompare(String(b), "ru", { numeric: true, sensitivity: "base" }); }
   function escapeHtml(s) {
     return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+  }
+
+  // ---------- Study renderers (v7.3)
+  // ---------- RU->ALAN front renderer (v8.6)
+  function renderRuAlanFront(el, item){
+    // number of groups determined ONLY by Russian translation variants
+    const groups = splitGroups(item.trans);
+    const exRaw = String(item.example || "").trim();
+
+    // parse examples into indexed groups
+    let eGroups = [];
+    if(exRaw){
+      const parts = exRaw.replace(/\n+/g,";").split(/\s*[;；]\s*/g).map(s=>s.trim()).filter(Boolean);
+      let cur = null;
+      for(const p of parts){
+        const m = p.match(/^\s*(\d+)\s*(?:[\.)]|[-–—])?\s*(.*)$/);
+        if(m){
+          if(cur) eGroups.push(cur);
+          cur = { i: Number(m[1])-1, lines: m[2] ? [m[2]] : [] };
+        }else{
+          if(!cur) cur = { i: 0, lines: [p] };
+          else cur.lines.push(p);
+        }
+      }
+      if(cur) eGroups.push(cur);
+    }
+
+    if(!groups.length){
+      el.textContent = escapeHtml(item.word);
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="groups">
+        ${groups.map((_,i)=>{
+          const eg = eGroups.find(g=>g.i===i);
+          return `
+            <div class="groupRow">
+              <span class="groupNum">${i+1}</span>
+              <div class="groupPill">
+                <div class="gTrans">${escapeHtml(item.word)}</div>
+                ${eg ? eg.lines.map(l=>`<div class="gEx">${escapeHtml(l)}</div>`).join("") : ``}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  // ---------- Combined renderer: translation + examples (v8.6)
+  function renderCombinedGroups(el, transText, exText){
+    const tGroups = splitGroups(transText);
+    const eRaw = String(exText||"").trim();
+
+    // parse examples into indexed groups
+    let eGroups = [];
+    if(eRaw){
+      const parts = eRaw.replace(/\n+/g,";").split(/\s*[;；]\s*/g).map(s=>s.trim()).filter(Boolean);
+      let cur = null;
+      for(const p of parts){
+        const m = p.match(/^\s*(\d+)\s*(?:[\.)]|[-–—])?\s*(.*)$/);
+        if(m){
+          if(cur) eGroups.push(cur);
+          cur = { i: Number(m[1])-1, lines: m[2] ? [m[2]] : [] };
+        }else{
+          if(!cur) cur = { i: 0, lines: [p] };
+          else cur.lines.push(p);
+        }
+      }
+      if(cur) eGroups.push(cur);
+    }
+
+    const max = Math.max(tGroups.length, eGroups.length);
+    if(!max){ el.textContent=""; return; }
+
+    el.innerHTML = `
+      <div class="groups">
+        ${Array.from({length:max}).map((_,i)=>{
+          const t = tGroups[i];
+          const eg = eGroups.find(g=>g.i===i);
+          return `
+            <div class="groupRow">
+              <span class="groupNum">${i+1}</span>
+              <div class="groupPill">
+                ${t ? `<div class="gTrans">${escapeHtml(t)}</div>` : ``}
+                ${eg ? eg.lines.map(l=>`<div class="gEx">${escapeHtml(l)}</div>`).join("") : ``}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+// ---------- Study renderers (v7.3)
+  // ---------- RU->ALAN front renderer (v8.6)
+  function renderRuAlanFront(el, item){
+    // number of groups determined ONLY by Russian translation variants
+    const groups = splitGroups(item.trans);
+    const exRaw = String(item.example || "").trim();
+
+    // parse examples into indexed groups
+    let eGroups = [];
+    if(exRaw){
+      const parts = exRaw.replace(/\n+/g,";").split(/\s*[;；]\s*/g).map(s=>s.trim()).filter(Boolean);
+      let cur = null;
+      for(const p of parts){
+        const m = p.match(/^\s*(\d+)\s*(?:[\.)]|[-–—])?\s*(.*)$/);
+        if(m){
+          if(cur) eGroups.push(cur);
+          cur = { i: Number(m[1])-1, lines: m[2] ? [m[2]] : [] };
+        }else{
+          if(!cur) cur = { i: 0, lines: [p] };
+          else cur.lines.push(p);
+        }
+      }
+      if(cur) eGroups.push(cur);
+    }
+
+    if(!groups.length){
+      el.textContent = escapeHtml(item.word);
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="groups">
+        ${groups.map((_,i)=>{
+          const eg = eGroups.find(g=>g.i===i);
+          return `
+            <div class="groupRow">
+              <span class="groupNum">${i+1}</span>
+              <div class="groupPill">
+                <div class="gTrans">${escapeHtml(item.word)}</div>
+                ${eg ? eg.lines.map(l=>`<div class="gEx">${escapeHtml(l)}</div>`).join("") : ``}
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  // Split text into groups by semicolon or newline
+  function splitGroups(text){
+    return String(text||"")
+      .split(/\s*[;；]\s*|\n+/g)
+      .map(s=>s.trim())
+      .filter(Boolean)
+      // strip leading numbering inside group text (e.g. "1. ...", "2) ...", "3 - ...")
+      .map(s=>s.replace(/^\s*\d+\s*(?:[\.)]|[-–—])\s*/,"").trim());
+  }
+
+  // Render translation groups as pills (group-level)
+  function renderTransGroups(el, text){
+    const groups = splitGroups(text);
+    if(!groups.length){ el.textContent = ""; return; }
+
+    const showNums = groups.length > 1;
+    el.innerHTML = `
+      <div class="groups">
+        ${groups.map((g,i)=>`
+          <div class="groupRow">
+            ${showNums ? `<span class="groupNum">${i+1}</span>` : ``}
+            <div class="groupPill">${escapeHtml(g)}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  // Render example groups by numeric markers (1,2,3...)
+  function renderExampleGroups(el, text){
+    const raw = String(text||"").trim();
+    if(!raw){ el.textContent = ""; return; }
+
+    // Split into candidate example lines by semicolons or newlines.
+    const parts = raw
+      .replace(/\n+/g, ";")
+      .split(/\s*[;；]\s*/g)
+      .map(s=>s.trim())
+      .filter(Boolean);
+
+    let groups = [];
+    let current = null;
+
+    for(const part of parts){
+      const mm = part.match(/^\s*(\d+)\s*(?:[\.)]|[-–—])?\s*(.*)$/);
+      if(mm){
+        if(current) groups.push(current);
+        const rest = (mm[2]||"").trim();
+        current = { num: mm[1], lines: rest ? [rest] : [] };
+      }else{
+        if(!current){
+          current = { num: null, lines: [part] };
+        }else{
+          current.lines.push(part);
+        }
+      }
+    }
+    if(current) groups.push(current);
+
+    const numbered = groups.length >= 1 && groups.every(g => g.num);
+
+    el.innerHTML = `
+      <div class="groups examples">
+        ${groups.map(g=>`
+          <div class="groupRow groupRowEx">
+            ${numbered ? `<span class="groupNum groupNumEx">${escapeHtml(g.num)}</span>` : ``}
+            <div class="groupExample">
+              ${g.lines.map(l=>`<div class="exLine">${escapeHtml(l)}</div>`).join("")}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
   // Split "a, b; c, d" into blocks and pills
@@ -332,6 +634,92 @@
   }
 
   // ---------- App state
+
+  // ---------- Dictionary content (Содержание словаря)
+  const viewDictContent = document.getElementById("viewDictContent");
+  const btnOpenDictContent = document.getElementById("btnOpenDictContent");
+  const dictSearchInput = document.getElementById("dictSearchInput");
+  const dictContentList = document.getElementById("dictContentList");
+
+  function renderDictContent(filter = "") {
+    if (!dictContentList) return;
+    dictContentList.innerHTML = "";
+    if (!Array.isArray(DATA) || !currentDict) return;
+
+    const q = String(filter||"").toLowerCase().trim();
+    const words = DATA
+      .filter(w =>
+        w.dict === currentDict &&
+        Number(w.dict_order) > 0 &&
+        (!q ||
+          String(w.word||"").toLowerCase().includes(q) ||
+          String(w.trans||"").toLowerCase().includes(q))
+      )
+      .sort((a,b)=>Number(a.dict_order)-Number(b.dict_order));
+
+    const bySection = {};
+    for (const w of words) {
+      const sec = (w.section || "Раздел").trim() || "Раздел";
+      (bySection[sec] ||= []).push(w);
+    }
+
+    for (const [sec, items] of Object.entries(bySection)) {
+      const header = document.createElement("div");
+      header.className = "sectionHeader";
+      header.textContent = "▸ " + sectionTitle(sec);
+
+      const body = document.createElement("div");
+      body.classList.add("hidden");
+
+      header.addEventListener("click", () => {
+        const closed = body.classList.toggle("hidden");
+        header.textContent = (closed ? "▸ " : "▾ ") + sectionTitle(sec);
+      });
+
+      for (const w of items) {
+        const row = document.createElement("div");
+        row.className = "dictWordRow";
+        row.innerHTML = `
+          <div class="dictNum">${Number(w.dict_order)}.</div>
+          <div>
+            <div class="w">${escapeHtml(w.word)}</div>
+            <div class="t">${escapeHtml(w.trans)}</div>
+          </div>
+          <button class="starBtn ${isFav(w.id) ? "on" : ""}" type="button">
+            ${isFav(w.id) ? "★" : "☆"}
+          </button>
+        `;
+        const star = row.querySelector(".starBtn");
+        star.addEventListener("click", (e)=>{
+          e.stopPropagation();
+          const on = toggleFav(w.id);
+          star.classList.toggle("on", on);
+          star.textContent = on ? "★" : "☆";
+        });
+        body.appendChild(row);
+      }
+
+      dictContentList.appendChild(header);
+      dictContentList.appendChild(body);
+    }
+  }
+
+  if (btnOpenDictContent && viewDictContent) {
+    btnOpenDictContent.addEventListener("click", () => {
+      renderDictContent("");
+      goView(viewDictContent);
+      if (dictSearchInput) {
+        dictSearchInput.value = "";
+      }
+    });
+  }
+
+  if (dictSearchInput) {
+    dictSearchInput.addEventListener("input", () => {
+      renderDictContent(dictSearchInput.value);
+    });
+  }
+
   let DATA = [];
   let favIds = loadFavSet();
   let currentDict = "";
@@ -363,29 +751,28 @@
           return;
         }
         renderSections(currentDict);
-        showView(viewSections);
+        goView(viewSections);
       });
     });
-    counter.textContent = "—";
-    modeEl.textContent = "—";
+    
     goHome({ historyMode: "replace" });
   }
 
   function renderSections(dict) {
-    sectionsTitle.textContent = (dict === "__fav__") ? "Избранное" : `Разделы: ${dictTitle(dict)}`;
+    sectionsTitle.textContent = (dict === "__fav__") ? "Избранное" : dictTitle(dict);
     const sections = (dict === "__fav__") ? ["Избранное"] : sectionsFrom(DATA, dict);
     sectionsList.innerHTML = sections.map(s => `<button class="btn" data-section="${escapeHtml(s)}">${escapeHtml(sectionTitle(s))}</button>`).join("");
     sectionsList.querySelectorAll("button[data-section]").forEach(btn => {
       btn.addEventListener("click", () => {
         currentSection = btn.getAttribute("data-section");
         renderSets(currentDict, currentSection);
-        showView(viewSets);
+        goView(viewSets);
       });
     });
   }
 
   function renderSets(dict, section) {
-    setsTitle.textContent = (dict === "__fav__") ? "Избранное" : `Сеты: ${sectionTitle(section)}`;
+    setsTitle.textContent = (dict === "__fav__") ? "Избранное" : sectionTitle(section);
     const sets = (dict === "__fav__") ? [1] : setsFrom(DATA, dict, section);
     setsList.innerHTML = sets.map(s => {
       const all = (dict === "__fav__") ? DATA.filter(w => favIds.has(w.id)) : wordsForSet(DATA, dict, section, s);
@@ -407,8 +794,8 @@
     });
   }
 
-  btnBackToDicts.addEventListener("click", () => showView(viewDicts));
-  btnBackToSections.addEventListener("click", () => showView(viewSections));
+  btnBackToDicts.addEventListener("click", () => goView(viewDicts));
+  btnBackToSections.addEventListener("click", () => goView(viewSections));
 
   // ---------- Set menu / hiding words
   let menuHidden = new Set();
@@ -424,15 +811,13 @@
     // UX: если это "Избранное", кнопка назад должна вести на главный экран
     btnBackToSets2.textContent = (currentDict === "__fav__") ? "← На главный" : "← К сетам";
 
-    setSearchInput.value = "";
     renderSetWordsList();
-    showView(viewSetMenu);
+    goView(viewSetMenu);
   }
 
   function renderSetWordsList() {
-    const q = (setSearchInput.value || "").trim().toLowerCase();
     const all = (currentDict === "__fav__") ? DATA.filter(w => favIds.has(w.id)) : wordsForSet(DATA, currentDict, currentSection, currentSet);
-    const filtered = q ? all.filter(w => (w.word + " " + w.trans).toLowerCase().includes(q)) : all;
+    const filtered = all;
 
     setWordsList.innerHTML = filtered.map(w => {
       const checked = !menuHidden.has(w.id);
@@ -478,8 +863,6 @@
     });
   }
 
-  setSearchInput.addEventListener("input", renderSetWordsList);
-
   btnSetShowAll.addEventListener("click", () => {
     menuHidden = new Set();
     setHiddenSet(currentDict, currentSection, currentSet, menuHidden);
@@ -509,13 +892,21 @@
       return;
     }
     renderSets(currentDict, currentSection);
-    showView(viewSets);
+    goView(viewSets);
   });
 
   btnModeKb.addEventListener("click", () => { currentStudyMode = "kb"; startStudySession(); });
   btnModeRu.addEventListener("click", () => { currentStudyMode = "ru"; startStudySession(); });
 
+  // ---------- Study counter helper
+  function updateStudyCounter(){
+    if (!counter) return;
+    const known = Math.max(0, totalPlanned - (mainQueue.length + repeatQueue.length));
+    counter.textContent = `знаю ${known}/${totalPlanned} слов`;
+  }
+
   // ---------- Study session
+
   function startStudySession() {
     const all = (currentDict === "__fav__") ? DATA.filter(w => favIds.has(w.id)) : wordsForSet(DATA, currentDict, currentSection, currentSet);
     const hidden = getHiddenSet(currentDict, currentSection, currentSet);
@@ -525,11 +916,13 @@
     repeatQueue = [];
     round = "main";
     totalPlanned = active.length;
+    updateStudyCounter();
 
     transEl.classList.add("hidden");
     exampleBox.classList.add("hidden");
-    showView(viewStudy);
+    goView(viewStudy);
     renderStudyCard();
+    updateStudyCounter();
   }
 
   function renderStudyCard() {
@@ -545,13 +938,9 @@
       transEl.textContent = "В этом сете все слова скрыты. Верни их в меню сета.";
       transEl.classList.remove("hidden");
       btnFav.classList.add("hidden");
-      btnExample.classList.add("hidden");
-      counter.textContent = "0/0";
-      modeEl.textContent = "—";
-      return;
+return;
     } else {
-      btnExample.classList.remove("hidden");
-    }
+}
 
     if (q.length === 0) {
       wordEl.textContent = "Готово ✅";
@@ -559,10 +948,7 @@
       transEl.classList.remove("hidden");
       exampleBox.classList.add("hidden");
       btnFav.classList.add("hidden");
-      btnExample.classList.add("hidden");
-      counter.textContent = `${totalPlanned}/${totalPlanned}`;
-      modeEl.textContent = "завершено";
-      return;
+return;
     }
 
     const item = q[0];
@@ -574,35 +960,32 @@
     const front = currentStudyMode === "kb" ? item.word : item.trans;
     const back = currentStudyMode === "kb" ? item.trans : item.word;
 
-    setRichOrText(wordEl, front);
-    setRichOrText(transEl, back);
+    // Front rendering (stage 2)
+    if (currentStudyMode === "ru") {
+      renderRuTitle(wordEl, item.trans);
+    } else {
+      wordEl.textContent = front;
+    }
+    // Back rendering depends on mode
+    if(currentStudyMode === "ru"){
+      // RU → ALAN: pills count from Russian variants
+      renderRuAlanFront(transEl, item);
+    }else{
+      // ALAN → RU (default)
+      renderCombinedGroups(transEl, back, item.example);
+    }
 
     const done = totalPlanned - q.length - (round === "repeat" ? 0 : 0);
-    counter.textContent = `${Math.max(0, totalPlanned - (mainQueue.length + (round === "repeat" ? repeatQueue.length : 0)))}/${totalPlanned}`;
-    modeEl.textContent = (round === "main" ? "основной круг" : "повтор") + " • " + (currentStudyMode === "kb" ? "КБ → RU" : "RU → КБ");
+    
   }
 
   // Tap: flip (show/hide translation)
   card.addEventListener("click", (e) => {
     // don't treat clicking example button as flip
-    if (e.target && (e.target.id === "btnExample" || e.target.id === "btnFav")) return;
+    if (e.target && (e.target.id === "btnFav")) return;
     transEl.classList.toggle("hidden");
   });
-
-  // Example button
-  btnExample.addEventListener("click", () => {
-    const item = currentQueue()[0];
-    if (!item) return;
-    const ex = (item.example || "").trim();
-    if (!ex) {
-      exampleBox.textContent = "Пример пока не добавлен.";
-    } else {
-      setRichOrText(exampleBox, ex);
-    }
-    exampleBox.classList.toggle("hidden");
-  });
-
-  function swipeDecision(known) {
+function swipeDecision(known) {
     setRoundIfNeeded();
     const q = currentQueue();
     if (!q.length) return;
@@ -618,40 +1001,102 @@
     if (round === "main" && mainQueue.length === 0) round = "repeat";
 
     renderStudyCard();
+    updateStudyCounter();
   }
 
-  btnYes.addEventListener("click", () => swipeDecision(true));
-  btnNo.addEventListener("click", () => swipeDecision(false));
+  btnYes.addEventListener("click", () => animateSwipe(1, true));
+  btnNo.addEventListener("click", () => animateSwipe(-1, false));
 
-  // Swipe gestures
+  
+  // ---------- Swipe animation (v8.9 stable)
+  let isAnimating = false;
+
+  function animateSwipe(dir, known){
+    if(isAnimating) return;
+    isAnimating = true;
+
+    card.style.pointerEvents = "none";
+    card.style.transition = "transform .18s ease, opacity .18s ease, box-shadow .18s ease";
+    card.style.transform = `translateX(${dir*520}px) rotate(${dir*14}deg)`;
+    card.style.opacity = "0";
+
+    setTimeout(()=>{
+      swipeDecision(known);
+      card.style.transform = "";
+      card.style.opacity = "";
+      card.style.boxShadow = "";
+      card.style.pointerEvents = "";
+      isAnimating = false;
+    }, 180);
+  }
+
+  // Swipe gestures (animated)
   let startX = 0, startY = 0, dragging = false;
 
   card.addEventListener("touchstart", (e) => {
-    if (!e.touches?.[0]) return;
+    if (!e.touches?.[0] || isAnimating) return;
     dragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
+    card.style.transition = "none";
+    card.style.boxShadow = "";
   }, { passive: true });
 
   card.addEventListener("touchmove", (e) => {
-    if (!dragging || !e.touches?.[0]) return;
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-    if (Math.abs(dy) > Math.abs(dx)) return;
-  }, { passive: true });
+  if (!dragging || !e.touches?.[0] || isAnimating) return;
+
+  const dx = e.touches[0].clientX - startX;
+  const dy = e.touches[0].clientY - startY;
+  if (Math.abs(dy) > Math.abs(dx)) return;
+
+  // Quizlet-like threshold (28% of screen width)
+  const threshold = Math.max(70, window.innerWidth * 0.35);
+  const progress = Math.min(Math.abs(dx) / threshold, 1);
+
+  const rotate = dx / 22;
+  const opacity = 1 - Math.min(Math.abs(dx) / (threshold * 1.6), 0.6);
+
+  card.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
+  card.style.opacity = String(opacity);
+
+  // Edge glow feedback
+  if (dx > 0) {
+    // right edge green
+    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), 28px 0 60px rgba(34,197,94,${0.75 * progress})`;
+  } else if (dx < 0) {
+    // left edge red
+    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), -28px 0 60px rgba(239,68,68,${0.75 * progress})`;
+  } else {
+    card.style.boxShadow = "";
+  }
+}, { passive: true });
 
   card.addEventListener("touchend", (e) => {
-    if (!dragging) return;
-    dragging = false;
-    const endX = (e.changedTouches?.[0]?.clientX ?? startX);
-    const dx = endX - startX;
-    const threshold = 70;
+  if (!dragging || isAnimating) return;
+  dragging = false;
 
-    if (dx > threshold) swipeDecision(true);
-    else if (dx < -threshold) swipeDecision(false);
-  });
+  const endX = (e.changedTouches?.[0]?.clientX ?? startX);
+  const dx = endX - startX;
 
-  btnBackToSetMenu.addEventListener("click", openSetMenu);
+  // Quizlet-like threshold (28% of screen width)
+  const threshold = Math.max(70, window.innerWidth * 0.35);
+
+  card.style.transition = "transform .18s ease, opacity .18s ease, box-shadow .18s ease";
+
+  if (dx > threshold) animateSwipe(1, true);
+  else if (dx < -threshold) animateSwipe(-1, false);
+  else {
+    // snap back
+    card.style.transform = "";
+    card.style.opacity = "";
+    card.style.boxShadow = "";
+  }
+});
+
+  btnBackToSetMenu.addEventListener("click", () => {
+  favIds = loadFavSet();
+  openSetMenu();
+});
 
   // Favorites toggle on study card
   btnFav.addEventListener("click", (e) => {
@@ -668,6 +1113,7 @@
   let testCorrect = 0;
   let testSelected = null;
   let testResults = [];
+  let testOptionPool = [];
   function getSelectedTestLimit() {
     const el = document.querySelector('input[name="testLimit"]:checked');
     const n = el ? Number(el.value) : 50;
@@ -764,7 +1210,7 @@ function openGlobalTestMenu() {
     // Update info when limit changes
     document.querySelectorAll('input[name="testLimit"]').forEach(r => (r.onchange = updateGlobalTestInfo));
 
-    showView(viewGlobalTestMenu);
+    goView(viewGlobalTestMenu);
   }
 
 
@@ -786,13 +1232,15 @@ function updateGlobalTestInfo() {
   }
 
   btnGlobalTest.addEventListener("click", openGlobalTestMenu);
-  btnGlobalTestBack.addEventListener("click", () => showView(viewDicts));
   btnGlobalModeKb.addEventListener("click", () => { testMode = "kb"; startTest(); });
   btnGlobalModeRu.addEventListener("click", () => { testMode = "ru"; startTest(); });
 
   function startTest() {
     const pool = getSelectedScopePool();
     const testLimit = getSelectedTestLimit();
+
+    // full scope pool for answer options
+    testOptionPool = pool.slice();
 
     testItems = shuffle(pool.slice()); // include hidden always
     if (testItems.length > testLimit) testItems = testItems.slice(0, testLimit);
@@ -806,14 +1254,22 @@ function updateGlobalTestInfo() {
     btnTestNext.textContent = "Дальше";
     btnTestNext.disabled = true;
 
-    showView(viewTest);
+    goView(viewTest);
     renderTestQuestion();
   }
 
   function pickOptions(correctItem) {
     const correct = testMode === "kb" ? correctItem.trans : correctItem.word;
-    const basePool = testItems.length ? testItems : DATA;
-    const pool = basePool.filter(w => w.id !== correctItem.id);
+    const targetPOS = (correctItem.pos || "").trim();
+
+    let pool = testOptionPool.filter(w =>
+      w.id !== correctItem.id &&
+      (!targetPOS || (w.pos && String(w.pos).trim() === targetPOS))
+    );
+
+    if (pool.length < 3) {
+      pool = testOptionPool.filter(w => w.id !== correctItem.id);
+    }
 
     const opts = [correct];
     let guard = 0;
@@ -945,7 +1401,6 @@ function updateGlobalTestInfo() {
     renderTestQuestion();
   });
 
-  btnTestExit.addEventListener("click", () => showView(viewDicts));
 
 
 // ---------- Init
@@ -954,7 +1409,7 @@ function updateGlobalTestInfo() {
 
     if (!Array.isArray(DATA) || !DATA.length) {
       dictsList.innerHTML = "<div class='smallNote'>Нет данных. Проверь таблицу и заголовки: id, dict, section, set, word, trans, example</div>";
-      showView(viewDicts);
+      goView(viewDicts);
       return;
     }
 
@@ -966,5 +1421,12 @@ function updateGlobalTestInfo() {
     }));
 
     renderDicts();
+
+  const btnOpenLearnMenu = document.getElementById("btnOpenLearnMenu");
+  if(btnOpenLearnMenu){
+    btnOpenLearnMenu.addEventListener("click", () => {
+      goView(viewLearnMenu);
+    });
+  }
   })();
 })();
