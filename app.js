@@ -1016,7 +1016,7 @@ function swipeDecision(known) {
     isAnimating = true;
 
     card.style.pointerEvents = "none";
-    card.style.transition = "transform .35s ease, opacity .35s ease, box-shadow .35s ease";
+    card.style.transition = "transform .5s ease, opacity .5s ease, box-shadow .5s ease";
     card.style.transform = `translateX(${dir*520}px) rotate(${dir*14}deg)`;
     card.style.opacity = "0";
 
@@ -1027,7 +1027,7 @@ function swipeDecision(known) {
       card.style.boxShadow = "";
       card.style.pointerEvents = "";
       isAnimating = false;
-    }, 350);
+    }, 500);
   }
 
   // Swipe gestures (animated)
