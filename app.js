@@ -1049,8 +1049,8 @@ function swipeDecision(known) {
   const dy = e.touches[0].clientY - startY;
   if (Math.abs(dy) > Math.abs(dx)) return;
 
-  // Quizlet-like threshold (35% of screen width)
-  const threshold = card.offsetWidth * 0.35;
+  // Quizlet-like threshold (30% of screen width)
+  const threshold = card.offsetWidth * 0.3;
   const progress = Math.min(Math.abs(dx) / threshold, 1);
 
   const rotate = dx / 22;
@@ -1078,8 +1078,8 @@ function swipeDecision(known) {
   const endX = (e.changedTouches?.[0]?.clientX ?? startX);
   const dx = endX - startX;
 
-  // Quizlet-like threshold (35% of screen width)
-  const threshold = card.offsetWidth * 0.35;
+  // Quizlet-like threshold (30% of screen width)
+  const threshold = card.offsetWidth * 0.3;
 
   card.style.transition = "transform .18s ease, opacity .18s ease, box-shadow .18s ease";
 
