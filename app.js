@@ -1023,7 +1023,8 @@ function swipeDecision(known) {
     setTimeout(()=>{
 
       swipeDecision(known);
-
+      card.style.boxShadow = "";
+      
       requestAnimationFrame(() => {
         card.style.transition = "none";
         card.style.transform = "translateY(-70px)";
