@@ -1049,8 +1049,8 @@ function swipeDecision(known) {
   const dy = e.touches[0].clientY - startY;
   if (Math.abs(dy) > Math.abs(dx)) return;
 
-  // Quizlet-like threshold (28% of screen width)
-  const threshold = Math.max(70, window.innerWidth * 0.35);
+  // Quizlet-like threshold (35% of screen width)
+  const threshold = card.offsetWidth * 0.35;
   const progress = Math.min(Math.abs(dx) / threshold, 1);
 
   const rotate = dx / 22;
@@ -1062,10 +1062,10 @@ function swipeDecision(known) {
   // Edge glow feedback
   if (dx > 0) {
     // right edge green
-    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), 28px 0 60px rgba(34,197,94,${0.75 * progress})`;
+    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), 28px 0 100px rgba(34,197,94,${1 * progress})`;
   } else if (dx < 0) {
     // left edge red
-    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), -28px 0 60px rgba(239,68,68,${0.75 * progress})`;
+    card.style.boxShadow = `0 10px 30px rgba(17,169,232,0.18), -28px 0 100px rgba(239,68,68,${1 * progress})`;
   } else {
     card.style.boxShadow = "";
   }
@@ -1078,8 +1078,8 @@ function swipeDecision(known) {
   const endX = (e.changedTouches?.[0]?.clientX ?? startX);
   const dx = endX - startX;
 
-  // Quizlet-like threshold (28% of screen width)
-  const threshold = Math.max(70, window.innerWidth * 0.35);
+  // Quizlet-like threshold (35% of screen width)
+  const threshold = card.offsetWidth * 0.35;
 
   card.style.transition = "transform .18s ease, opacity .18s ease, box-shadow .18s ease";
 
