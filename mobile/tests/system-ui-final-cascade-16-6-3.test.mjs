@@ -39,7 +39,7 @@ test('Guide story steps center the exact story before rendering a target-depende
   assert.match(pathScreen,/storyEdgeStart/);
   assert.match(pathScreen,/storyEdgeEnd/);
   assert.match(guide,/targetExpected=targetDefs\.some/);
-  assert.match(guide,/if\(!visible\|\|!step\|\|\(targetExpected&&!holes\.length\)\)return null/);
+  assert.match(guide,/opacity:targetExpected&&!holes\.length\?0:1/);
 });
 
 test('Checkboxes preserve both Web checkbox vocabularies: native accent and bracket word toggles',()=>{
