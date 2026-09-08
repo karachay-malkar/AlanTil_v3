@@ -20,7 +20,8 @@ function FlagIcon({language,compact=false}){
 }
 
 function LanguageSegmentedControl({value,onChange,compact=false}){
-  return <View accessibilityRole="radiogroup" style={styles.languageSegments}>{LEARNING_SETUP_LANGUAGES.map((item)=>{const active=value===item.code;return <Pressable key={item.code} accessibilityRole="radio" accessibilityState={{checked:active}} onPress={()=>onChange(item.code)} style={({pressed})=>[styles.languageSegmentItem,active&&styles.languageSegmentItemActive,pressed&&styles.pressed]}><FlagIcon language={item.code} compact={compact}/><Text numberOfLines={1} style={[styles.languageSegmentLabel,compact&&styles.languageSegmentLabelCompact,active&&styles.languageSegmentLabelActive]}>{item.label}</Text></Pressable>;})}</View>;
+  const type=useSemanticTypography();
+  return <View accessibilityRole="radiogroup" style={styles.languageSegments}>{LEARNING_SETUP_LANGUAGES.map((item)=>{const active=value===item.code;return <Pressable key={item.code} accessibilityRole="radio" accessibilityState={{checked:active}} onPress={()=>onChange(item.code)} style={({pressed})=>[styles.languageSegmentItem,active&&styles.languageSegmentItemActive,pressed&&styles.pressed]}><FlagIcon language={item.code} compact={compact}/><Text numberOfLines={1} style={[styles.languageSegmentLabel,compact&&styles.languageSegmentLabelCompact,active&&styles.languageSegmentLabelActive,{fontSize:type.caption.fontSize,lineHeight:type.caption.fontSize}]}>{item.label}</Text></Pressable>;})}</View>;
 }
 
 function DisclosureSection({visible,children}){

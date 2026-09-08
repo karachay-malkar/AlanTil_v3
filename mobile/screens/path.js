@@ -15,6 +15,8 @@ import { MonoLabel } from '../ui/parity.js';
 import { ListChecksIcon } from '../ui/icons.js';
 import { Topography } from '../ui/topography.js';
 import { theme } from '../ui/theme.js';
+import { useSemanticTypography } from '../ui/runtime-settings.js';
+import { textMetrics } from '../../packages/alantil-ui/typography.js';
 
 const C=theme.colors;
 const POSITION_PATTERN=[-1,0,1,0];
@@ -35,7 +37,7 @@ function geometryBuffer(){return{map:null,stations:new Map(),sections:new Map(),
 function ensureTargetRef(map,key){if(!map.has(key))map.set(key,{current:null});return map.get(key);}
 
 function StoryTabs({route,activeStory,onChange,targetRef,storyTargetRefs,controlRef}){
-  const {width}=useWindowDimensions(),fontSize=Math.min(13,Math.max(10,width*.03)),scrollRef=useRef(null),viewportRef=useRef(1),contentRef=useRef(1),offsetRef=useRef(0),layoutsRef=useRef(new Map()),[edges,setEdges]=useState({start:false,end:false});
+  const type=useSemanticTypography(),{width}=useWindowDimensions(),fontSize=type.caption.fontSize,scrollRef=useRef(null),viewportRef=useRef(1),contentRef=useRef(1),offsetRef=useRef(0),layoutsRef=useRef(new Map()),[edges,setEdges]=useState({start:false,end:false});
   const syncEdges=(offset=offsetRef.current)=>{const max=Math.max(0,contentRef.current-viewportRef.current),next={start:max>3&&offset>3,end:max>3&&offset<max-3};setEdges(current=>current.start===next.start&&current.end===next.end?current:next);};
   const scrollToStory=(type,animated=true)=>new Promise(resolve=>{const layout=layoutsRef.current.get(type),viewport=viewportRef.current;if(!layout||!viewport){resolve(false);return;}const max=Math.max(0,contentRef.current-viewport),x=Math.max(0,Math.min(max,layout.x+layout.width/2-viewport/2));offsetRef.current=x;scrollRef.current?.scrollTo({x,animated});syncEdges(x);setTimeout(()=>resolve(true),animated?190:0);});
   useImperativeHandle(controlRef,()=>({scrollToStory}),[route.storyOrder,width]);
@@ -227,6 +229,7 @@ function StoryStele({story,visible,onOpen,onClose}){
 }
 
 export function PathScreen({route,settings={},onOpenStation,onOpenWordList}){
+  const type=useSemanticTypography(),routeSpacing=settings.text_size_code==='large'?{gap:72,paddingBottom:66}:settings.text_size_code==='small'?{gap:58,paddingBottom:48}:{gap:58,paddingBottom:52};
   const m=(key,params)=>msg(settings,key,params),defaultStory=route.storyOrder?.[0]||'';
   const [activeStory,setActiveStory]=useState(defaultStory),[pathReady,setPathReady]=useState(false),[progressMap,setProgressMap]=useState(()=>new Map()),[geometry,setGeometry]=useState(null),[guideIndex,setGuideIndex]=useState(-1),[guideStationKey,setGuideStationKey]=useState(''),[steleOpen,setSteleOpen]=useState(false);
   const scrollRef=useRef(null),positionedRef=useRef(false),offsetRef=useRef(0),contentHeightRef=useRef(1),viewportHeightRef=useRef(1),storyRef=useRef(defaultStory),storyTabsRef=useRef(null),storyTabsControlRef=useRef(null),routeScaleRef=useRef(null),geometryRef=useRef(geometryBuffer()),geometryFrameRef=useRef(0),geometrySignatureRef=useRef(''),storyTargetRefsRef=useRef(new Map()),stationTargetRefsRef=useRef(new Map());
@@ -371,28 +374,28 @@ export function PathScreen({route,settings={},onOpenStation,onOpenWordList}){
           {sections.map((section)=>{
             const reversedStations=[...(section.stations||[])].reverse();
             return <View key={sectionKey(catalog,section)} style={styles.routeSection} onLayout={(event)=>recordSection(catalog,section,event)}>
-              <View style={styles.routeSectionStations}>
+              <View style={[styles.routeSectionStations,routeSpacing]}>
                 {reversedStations.map((station)=>{
                   const summary=stationWordProgress(station,snapshot),status=computedStationStatus(station,snapshot),index=stationIndex.get(station.key)||0,shift=shiftFor(station),milestones=stationMilestoneCount(summary.mastered),done=status==='mastered'||status==='review_1_due',fallback=m('mobile.path.stage',{number:index+1}),targetRef=ensureTargetRef(stationTargetRefs,station.key);
                   return <View key={station.key} style={styles.stationRow} onLayout={(event)=>recordStation(catalog,section,station,event)}>
                     <Pressable accessibilityRole="button" accessibilityLabel={station.name||fallback} accessibilityValue={{text:status}} disabled={status==='locked'} accessibilityState={{disabled:status==='locked'}} hitSlop={8} onPress={()=>openStation(station)} style={({pressed})=>[styles.stationNode,status==='locked'&&styles.stationLocked,{transform:[{translateX:shift},{scale:pressed?0.97:1}]}]}>
                       <StationProgressRing targetRef={targetRef} percent={summary.percent} done={done}>
-                        <MillstoneFace status={status} done={done}><Text style={styles.stationOrdinal}>{String(index+1).padStart(2,'0')}</Text></MillstoneFace>
+                        <MillstoneFace status={status} done={done}><Text style={[styles.stationOrdinal,textMetrics(type.micro.fontSize,1)]}>{String(index+1).padStart(2,'0')}</Text></MillstoneFace>
                       </StationProgressRing>
-                      {milestones?<Text style={styles.stationMilestones}>{'⌃'.repeat(milestones)}</Text>:null}
+                      {milestones?<Text style={[styles.stationMilestones,textMetrics(type.micro.fontSize,1)]}>{'⌃'.repeat(milestones)}</Text>:null}
                       <View style={styles.stationMeta}>
-                        {labels?<Text numberOfLines={2} style={styles.stationLabel}>{station.name||fallback}</Text>:null}
-                        <Text style={styles.stationCount}>{summary.mastered}/{summary.total}</Text>
+                        {labels?<Text numberOfLines={2} style={[styles.stationLabel,textMetrics(type.caption.fontSize,1.15)]}>{station.name||fallback}</Text>:null}
+                        <Text style={[styles.stationCount,textMetrics(type.micro.fontSize,1)]}>{summary.mastered}/{summary.total}</Text>
                       </View>
                     </Pressable>
                   </View>;
                 })}
               </View>
-              {section.name?<Text style={styles.sectionHeading}>{section.name}</Text>:null}
+              {section.name?<Text style={[styles.sectionHeading,textMetrics(type.body.fontSize,1.2142857142857142)]}>{section.name}</Text>:null}
             </View>;
           })}
         </View>
-        <Text style={styles.catalogHeading}>{catalog.name||m('mobile.path.dictionary')}</Text>
+        <Text style={[styles.catalogHeading,textMetrics(type.emphasis.fontSize,1.1764705882352942)]}>{catalog.name||m('mobile.path.dictionary')}</Text>
       </View>
     );
   });

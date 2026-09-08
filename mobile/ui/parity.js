@@ -1,14 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { theme } from './theme.js';
+import { useSemanticTypography } from './runtime-settings.js';
+import { textMetrics } from '../../packages/alantil-ui/typography.js';
 import { CutCornerFrame } from './cut-corner.js';
 
 const C = theme.colors;
 const T = theme.type;
 
 export function ScreenSection({ title, trailing, children, style }) {
+  const type = useSemanticTypography();
   return <View style={[styles.section, style]}>
-    {(title || trailing) ? <View style={styles.sectionHead}>{title ? <Text style={styles.sectionTitle}>{title}</Text> : <View />}{trailing || null}</View> : null}
+    {(title || trailing) ? <View style={styles.sectionHead}>{title ? <Text style={[styles.sectionTitle,textMetrics(type.body.fontSize,1.2)]}>{title}</Text> : <View />}{trailing || null}</View> : null}
     {children}
   </View>;
 }
@@ -18,10 +21,11 @@ export function SurfaceCard({ children, style, inset = false, flat = false }) {
 }
 
 export function CompactSegmentedControl({ value, items, onChange, accessibilityLabel, variant='settings' }) {
+  const type = useSemanticTypography();
   const activeStyle=variant==='set'?styles.segmentItemSetActive:variant==='test'?styles.segmentItemTestActive:variant==='songs'?styles.segmentItemSongsActive:styles.segmentItemActive;
   return <View accessibilityLabel={accessibilityLabel} style={styles.segmented}>{items.map(([id, label]) => {
     const active = value === id;
-    return <Pressable key={id} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => onChange(id)} style={({ pressed }) => [styles.segmentItem, active && activeStyle, pressed && styles.pressed]}><Text numberOfLines={1} style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{label}</Text></Pressable>;
+    return <Pressable key={id} accessibilityRole="button" accessibilityState={{ selected: active }} onPress={() => onChange(id)} style={({ pressed }) => [styles.segmentItem, active && activeStyle, pressed && styles.pressed]}><Text numberOfLines={1} style={[styles.segmentLabel,textMetrics(type[variant==='set'||variant==='test'?'micro':'caption'].fontSize,1), active && styles.segmentLabelActive]}>{label}</Text></Pressable>;
   })}</View>;
 }
 
@@ -32,29 +36,35 @@ export function OverflowMarquee({ children, textStyle, style, enabled = true }) 
 }
 
 export function ListRow({ leading, title, subtitle, trailing, onPress, selected = false, compact = false, marquee = false, style, titleStyle, subtitleStyle, leadingStyle, trailingStyle }) {
+  const type = useSemanticTypography();
   const Body = onPress ? Pressable : View;
-  return <Body accessibilityRole={onPress ? 'button' : undefined} accessibilityState={onPress ? { selected } : undefined} onPress={onPress} style={({ pressed }) => [styles.listRow, compact && styles.listRowCompact, selected && styles.listRowSelected, pressed && styles.pressed, style]}>
+  const rowStyle = (pressed = false) => [styles.listRow, compact && styles.listRowCompact, selected && styles.listRowSelected, pressed && styles.pressed, style];
+  return <Body accessibilityRole={onPress ? 'button' : undefined} accessibilityState={onPress ? { selected } : undefined} onPress={onPress} style={onPress ? ({ pressed }) => rowStyle(pressed) : rowStyle()}>
     {leading ? <View style={[styles.listLeading,leadingStyle]}>{leading}</View> : null}
-    <View style={styles.listCopy}>{marquee?<OverflowMarquee textStyle={[styles.listTitle,titleStyle]}>{title}</OverflowMarquee>:<Text numberOfLines={1} style={[styles.listTitle,titleStyle]}>{title}</Text>}{subtitle ? <Text numberOfLines={2} style={[styles.listSubtitle,subtitleStyle]}>{subtitle}</Text> : null}</View>
+    <View style={styles.listCopy}>{marquee?<OverflowMarquee textStyle={[styles.listTitle,textMetrics(type.emphasis.fontSize,1.2),titleStyle]}>{title}</OverflowMarquee>:<Text numberOfLines={1} style={[styles.listTitle,textMetrics(type.emphasis.fontSize,1.2),titleStyle]}>{title}</Text>}{subtitle ? <Text numberOfLines={2} style={[styles.listSubtitle,textMetrics(type.caption.fontSize,4/3),subtitleStyle]}>{subtitle}</Text> : null}</View>
     {trailing ? <View style={[styles.listTrailing,trailingStyle]}>{trailing}</View> : null}
   </Body>;
 }
 
 export function MetricStrip({ items }) {
-  return <View style={styles.metrics}>{items.map(([value, label]) => <View key={label} style={styles.metric}><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricLabel}>{label}</Text></View>)}</View>;
+  const type = useSemanticTypography();
+  return <View style={styles.metrics}>{items.map(([value, label]) => <View key={label} style={styles.metric}><Text style={[styles.metricValue,textMetrics(type.title.fontSize,1)]}>{value}</Text><Text style={[styles.metricLabel,textMetrics(type.micro.fontSize,1.2)]}>{label}</Text></View>)}</View>;
 }
 
 export function MonoLabel({ children, accent = false, style }) {
-  return <Text style={[styles.monoLabel, accent && styles.monoAccent, style]}>{children}</Text>;
+  const type = useSemanticTypography();
+  return <Text style={[styles.monoLabel,textMetrics(type.micro.fontSize,1.1), accent && styles.monoAccent, style]}>{children}</Text>;
 }
 
 
 export function SmallActionButton({ children, onPress, active = false, disabled = false }) {
-  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.smallAction, disabled && styles.smallActionDisabled, pressed && !disabled && styles.smallActionPressed]}><CutCornerFrame fill={active?C.accent:'transparent'} stroke={active?C.accentStrong:C.line} cut={theme.button.cut} radius={theme.button.radius}/><Text style={[styles.smallActionLabel, active && styles.smallActionLabelActive]}>{children}</Text></Pressable>;
+  const type = useSemanticTypography();
+  return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [styles.smallAction, disabled && styles.smallActionDisabled, pressed && !disabled && styles.smallActionPressed]}><CutCornerFrame fill={active?C.accent:'transparent'} stroke={active?C.accentStrong:C.line} cut={theme.button.cut} radius={theme.button.radius}/><Text style={[styles.smallActionLabel,textMetrics(type.micro.fontSize,1), active && styles.smallActionLabelActive]}>{children}</Text></Pressable>;
 }
 
 export function EmptyState({ children }) {
-  return <View style={styles.empty}><Text style={styles.emptyText}>{children}</Text></View>;
+  const type = useSemanticTypography();
+  return <View style={styles.empty}><Text style={[styles.emptyText,textMetrics(type.caption.fontSize,1.5)]}>{children}</Text></View>;
 }
 
 const styles = StyleSheet.create({

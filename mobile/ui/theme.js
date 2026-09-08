@@ -1,5 +1,6 @@
 import { UI_TOKENS } from '../../packages/alantil-ui/tokens.js';
 import { CHROME_CONTRACT } from '../../packages/alantil-ui/chrome.js';
+import { resolveTypography } from '../../packages/alantil-ui/typography.js';
 
 const W={...UI_TOKENS,chrome:CHROME_CONTRACT};
 
@@ -32,12 +33,12 @@ export const theme={
   account:W.account,
 };
 
-export function typographyFor(textSizeCode='medium') {
-  return W.typeScale[textSizeCode]||W.typeScale.medium;
+export function typographyFor(textSizeCode='medium',viewportWidth) {
+  return resolveTypography(textSizeCode,viewportWidth);
 }
 
-export function semanticTypography(textSizeCode='medium') {
-  const t=typographyFor(textSizeCode),line=(size,multiplier)=>Math.round(size*multiplier);
+export function semanticTypography(textSizeCode='medium',viewportWidth) {
+  const t=typographyFor(textSizeCode,viewportWidth),line=(size,multiplier)=>size*multiplier;
   const terminal={fontFamily:theme.font.terminal};
   const body={fontFamily:theme.font.body};
   const display={fontFamily:theme.font.display};
@@ -54,8 +55,8 @@ export function semanticTypography(textSizeCode='medium') {
     result:{fontSize:t.result,lineHeight:line(t.result,1.02),fontWeight:'800',...display},
     button:{fontSize:t.body,lineHeight:line(t.body,1.2),fontWeight:'800',...body},
     navigation:{fontSize:t.micro,lineHeight:line(t.micro,1.15),fontWeight:'750',...terminal},
-    wordCard:{fontSize:t.display,lineHeight:line(t.display,1.03),fontWeight:'800',...display},
-    question:{fontSize:t.display,lineHeight:line(t.display,1.04),fontWeight:'800',...display},
+    wordCard:{fontSize:t.display,lineHeight:line(t.display,1.08),fontWeight:'900',...display},
+    question:{fontSize:t.display,lineHeight:line(t.display,1.08),fontWeight:'900',...display},
   };
 }
 
