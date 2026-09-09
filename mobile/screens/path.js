@@ -130,10 +130,11 @@ const RouteScale=forwardRef(function RouteScale({parts,onJump},ref){
 });
 
 function StoryStele({story,visible,onOpen,onClose}){
+  const semantic=useSemanticTypography();
   const {width,height}=useWindowDimensions(),bodyRef=useRef(null),autoTimerRef=useRef(null),autoFrameRef=useRef(null),autoLastTimeRef=useRef(0),scrollOffsetRef=useRef(0),contentHeightRef=useRef(0),viewportHeightRef=useRef(0),fitPassRef=useRef(0),pulse=useRef(new Animated.Value(0)).current;
   const [reduceMotion,setReduceMotion]=useState(false),[overflow,setOverflow]=useState(false),[fit,setFit]=useState(()=>({bodySize:13.5,lineHeight:1.42,gap:6}));
   const compact=width<=360,cardWidth=Math.max(0,Math.min(width-(compact?4:6),height*.53,932)),cardHeight=cardWidth*(1688/932);
-  const titleSize=Math.min(44,Math.max(19,cardWidth*.068)),initialBodySize=Math.min(21,Math.max(13.5,cardWidth*.038)),initialGap=Math.min(12,Math.max(6,cardWidth*.018));
+  const titleSize=semantic.title.fontSize,initialBodySize=semantic.body.fontSize,initialGap=Math.min(12,Math.max(6,cardWidth*.018));
 
   const clearAutoScroll=()=>{
     if(autoTimerRef.current){clearTimeout(autoTimerRef.current);autoTimerRef.current=null;}
@@ -160,7 +161,7 @@ function StoryStele({story,visible,onOpen,onClose}){
     fitPassRef.current=1;
     const ratio=Math.max(.78,Math.min(1,viewportHeightRef.current/Math.max(1,contentHeightRef.current)));
     setFit({
-      bodySize:Math.max(STELE_MIN_BODY_FONT_SIZE,initialBodySize*ratio),
+      bodySize:initialBodySize,
       lineHeight:Math.max(STELE_MIN_LINE_HEIGHT,1.42-(1-ratio)*.32),
       gap:Math.max(STELE_MIN_GAP,initialGap*ratio),
     });
@@ -206,7 +207,7 @@ function StoryStele({story,visible,onOpen,onClose}){
           <Image pointerEvents="none" source={STORY_STELE} resizeMode="contain" style={styles.steleCardImage}/>
           <Text pointerEvents="none" style={[styles.steleCardStar,{fontSize:Math.max(20,Math.min(42,cardWidth*.06))}]}>✦</Text>
           <Pressable accessibilityRole="none" onPress={(event)=>event.stopPropagation?.()} style={styles.steleContent}>
-            <Text adjustsFontSizeToFit minimumFontScale={Math.min(1,18/titleSize)} numberOfLines={2} style={[styles.steleTitle,{fontSize:titleSize,lineHeight:titleSize*1.03}]}>{title}</Text>
+            <Text style={[styles.steleTitle,{fontSize:titleSize,lineHeight:titleSize*1.03}]}>{title}</Text>
             <ScrollView
               ref={bodyRef}
               style={styles.steleBodyViewport}

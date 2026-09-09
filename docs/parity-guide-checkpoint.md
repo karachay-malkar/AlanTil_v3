@@ -35,3 +35,12 @@ Input mobile: 4a91cd4a327c58cc915ab5f3b22fcec26431b33d.
 - Local selected suite: 199 tests pass; all eight existing source gates pass.
 - Expanded CI scenarios: Test 20/40/80 in both directions, answering then exit/restore; Match 20/40/80 count and restore; cancel/confirm for both games; Stage Test cancel. These are acceptance requests until the new CI run succeeds, not completed results.
 - Scope still open: exact paired visual reference comparison for all states; Android hardware Back, gray-frame acceptance and gestures; live OAuth/device lifecycle, cloud/offline sync, populated songs/favorites and authenticated UI.
+
+## Learn surface and Stele typography — 2026-09-09
+
+- Replaced flat Learn face fill with the exact 145-degree Web gradient, including both RGBA stops. SVG endpoints preserve the CSS angle for each measured card aspect ratio.
+- Responsive front/back padding now follows learn.css, including the <=420px override.
+- Translation weight/line-height and example/ordinal line-height now follow the final original CSS rules.
+- Stele title/body use semantic S/M/L sizes. Overflow fitting may tighten line spacing and gaps but cannot shrink the font below the selected semantic size; scrolling remains available.
+- 202 local tests and eight source gates passed. CI now checks exact default Stele body size rather than only a minimum.
+- Remaining acceptance is unchanged: paired original Web visuals, native device rendering/lifecycle, real OAuth, cloud sync and filled-state coverage remain open.
