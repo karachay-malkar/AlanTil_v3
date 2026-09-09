@@ -26,3 +26,12 @@ Input mobile: 4a91cd4a327c58cc915ab5f3b22fcec26431b33d.
 | Progress | Offline, guest transfer, conflict/sync and no data loss |
 | Content | Filled favorites, songs/audio, authenticated profile/statistics |
 | Languages | RU/EN/TR, script/dialect and long-text S/M/L |
+
+## Session exit and storage follow-up — 2026-09-09
+
+- All four session modes now share the same confirmation flow and localized exit phrase. Failed final persistence leaves the screen open for retry.
+- Session storage captures the user scope and namespace at invocation, serializes the snapshot immediately, and orders read/write/clear operations per key. Regression tests cover account switching during migration, pending writes followed by completion clear, and restore waiting for save.
+- Station statistics and Profile tabs/metrics/settings links use the original semantic font sizes.
+- Local selected suite: 199 tests pass; all eight existing source gates pass.
+- Expanded CI scenarios: Test 20/40/80 in both directions, answering then exit/restore; Match 20/40/80 count and restore; cancel/confirm for both games; Stage Test cancel. These are acceptance requests until the new CI run succeeds, not completed results.
+- Scope still open: exact paired visual reference comparison for all states; Android hardware Back, gray-frame acceptance and gestures; live OAuth/device lifecycle, cloud/offline sync, populated songs/favorites and authenticated UI.
